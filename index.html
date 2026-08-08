@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html class="light" lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>BioSync Smart Terrarium Dashboard</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Material Symbols Outlined & Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <!-- Chart.js & Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-surface-variant": "#3c4a42",
+                      "inverse-surface": "#2d3133",
+                      "on-error": "#ffffff",
+                      "secondary-container": "#dae2fd",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary-container": "#71a1ff",
+                      "surface-container-low": "#f2f4f6",
+                      "on-surface": "#191c1e",
+                      "on-primary": "#ffffff",
+                      "surface-tint": "#006c49",
+                      "outline-variant": "#bbcabf",
+                      "on-secondary": "#ffffff",
+                      "primary-container": "#10b981",
+                      "surface": "#f7f9fb",
+                      "error-container": "#ffdad6",
+                      "background": "#f7f9fb",
+                      "on-error-container": "#93000a",
+                      "primary": "#006c49",
+                      "error": "#ba1a1a",
+                      "secondary": "#565e74",
+                      "surface-container-high": "#e6e8ea",
+                      "surface-variant": "#e0e3e5",
+                      "on-primary-container": "#00422b",
+                      "surface-container": "#eceef0",
+                      "outline": "#6c7a71"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "fontFamily": {
+                      "sans": ["Inter", "sans-serif"],
+                      "lcd": ["Share Tech Mono", "monospace"]
+              }
+            }
+          }
+        }
+    </script>
+
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Custom Toggle Switch Styles */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #10b981;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #10b981;
+        }
+
+        /* LCD 16x2 Screen Styling */
+        .lcd-screen-box {
+            background-color: #0b382c;
+            border: 2px solid #135e4a;
+            font-family: 'Share Tech Mono', monospace;
+            color: #34d399;
+            text-shadow: 0 0 8px rgba(52, 211, 153, 0.6);
+            letter-spacing: 2px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .lcd-screen-box.lcd-off {
+            background-color: #061713;
+            color: #0e4437;
+            text-shadow: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-sans antialiased overflow-hidden flex h-screen">
+
+<!-- Side Navigation (Stitch Layout Shell) -->
+<nav class="hidden md:flex flex-col h-screen fixed left-0 top-0 py-6 px-6 w-64 bg-surface-container-lowest border-r border-outline-variant z-40 shadow-none">
+    <!-- Brand / Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-extrabold text-primary flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary-container">eco</span>
+            Smart Terrarium
+        </h1>
+        <p class="text-xs text-on-surface-variant mt-1 font-medium flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-primary-container inline-block"></span> System Online
+        </p>
+    </div>
+
+    <!-- Navigation Links -->
+    <div class="flex flex-col gap-2 flex-grow">
+        <a class="flex items-center gap-3 bg-primary-container text-on-primary-container font-semibold rounded-lg px-4 py-2.5 transition-all" href="#">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span class="text-sm">Dashboard</span>
+        </a>
+        <a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2.5 hover:bg-surface-container-high transition-all rounded-lg" href="#analytics-section">
+            <span class="material-symbols-outlined">analytics</span>
+            <span class="text-sm">Analytics</span>
+        </a>
+        <a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2.5 hover:bg-surface-container-high transition-all rounded-lg" href="#controls-section">
+            <span class="material-symbols-outlined">tune</span>
+            <span class="text-sm">Điều khiển</span>
+        </a>
+        <a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2.5 hover:bg-surface-container-high transition-all rounded-lg" href="#alerts-section">
+            <span class="material-symbols-outlined">notifications</span>
+            <span class="text-sm">Thông báo</span>
+        </a>
+    </div>
+
+    <!-- User Profile Footer -->
+    <div class="mt-auto border-t border-outline-variant pt-4 flex items-center gap-3">
+        <img class="w-10 h-10 rounded-full object-cover border border-outline-variant" alt="User profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8rXuGSoqyAE7LJbyQFduF-nrQsU3pFFTMSKiwENEun_vVNZjhbV9DN5RLuSUzGopjitcZeRM4i7xz8As5NujcBWCp_DlTWJdDVM9L3djtxRGqErO57JRdaBbaaLt7b_0P3zsc5nnDVrr8CtX0HZlrYYBnhvcJZ3JcSJkeSgxUqrGdZouIJTqKYSQ-NKm6thNZ8e2-2LfDqb3_ZNrIL-bcybfYGxnu3uSuw0CtO6fnuYGKul-uoOgNgcaxk_5t4pgN4QotYhQenLs">
+        <div>
+            <p class="text-sm font-semibold text-on-surface">Dr. Botanist</p>
+            <p class="text-xs text-on-surface-variant">Admin IoT System</p>
+        </div>
+    </div>
+</nav>
+
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 h-screen overflow-y-auto bg-background">
+    <!-- Top App Bar -->
+    <header class="flex justify-between items-center w-full px-6 h-16 sticky top-0 bg-surface border-b border-outline-variant z-30">
+        <div class="flex items-center gap-3 md:hidden">
+            <span class="material-symbols-outlined text-on-surface cursor-pointer">menu</span>
+            <h1 class="text-lg font-bold text-primary">Smart Terrarium</h1>
+        </div>
+        <div class="hidden md:block">
+            <span class="text-xs font-semibold uppercase tracking-wider text-on-surface-variant" id="conn-status-text">Đang kết nối Supabase Cloud...</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="export-csv-btn" class="text-xs font-semibold bg-surface-container hover:bg-surface-container-high text-on-surface px-3 py-1.5 rounded-lg border border-outline-variant transition-all flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">download</span> Xuất CSV
+            </button>
+            <button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors">
+                <span class="material-symbols-outlined">notifications</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Dashboard Canvas Body -->
+    <div class="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
+        
+        <!-- Header Title Section -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-2">
+            <div>
+                <h2 class="text-2xl lg:text-3xl font-extrabold text-on-surface">BioSync Interface</h2>
+                <p class="text-sm text-on-surface-variant mt-1">Giám sát & Điều khiển Mô hình Terrarium Thông minh Real-time</p>
+            </div>
+            <div class="mt-3 md:mt-0 flex items-center bg-surface-container px-3 py-1.5 rounded-lg border border-outline-variant text-xs font-semibold">
+                <span class="w-2.5 h-2.5 rounded-full bg-primary-container mr-2 animate-pulse"></span>
+                <span class="text-on-surface">System Online</span>
+                <div class="ml-3 pl-3 border-l border-outline-variant flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm text-on-surface-variant">wifi</span>
+                    <span class="text-on-surface-variant">ESP8266 + Supabase</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- FUNCTION 1: LCD 16x2 DISPLAY SIMULATOR CARD -->
+        <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant shadow-sm">
+            <div class="flex justify-between items-center mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">developer_board</span>
+                    <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider">Màn Hình LCD 16x2 I2C (Arduino U1 + PCF8574)</h3>
+                </div>
+                <span class="text-xs text-on-surface-variant bg-surface-container px-2 py-0.5 rounded font-mono">ADDR: 0x27</span>
+            </div>
+            <div class="lcd-screen-box p-4 rounded-lg flex flex-col gap-1 text-lg font-bold" id="lcd-screen-container">
+                <div class="lcd-line" id="lcd-line-1">Temp:26.0C H:65%</div>
+                <div class="lcd-line" id="lcd-line-2">Soil:65% Lgt:SUN </div>
+            </div>
+        </div>
+
+        <!-- SENSOR METRIC CARDS GRID (PROPOSAL FUNCTIONS 1, 2, 3) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <!-- Nhiệt độ (DHT11) Card -->
+            <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant flex flex-col justify-between shadow-sm">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Nhiệt độ (DHT11)</h3>
+                    <span class="material-symbols-outlined text-amber-500">thermometer</span>
+                </div>
+                <div class="text-3xl font-extrabold text-on-surface mb-2" id="metric-temp-val">26°C</div>
+                <div class="h-6 w-full flex items-end gap-1 opacity-60">
+                    <div class="w-1/6 bg-amber-500 rounded-t h-1/2"></div>
+                    <div class="w-1/6 bg-amber-500 rounded-t h-3/5"></div>
+                    <div class="w-1/6 bg-amber-500 rounded-t h-2/5"></div>
+                    <div class="w-1/6 bg-amber-500 rounded-t h-4/5"></div>
+                    <div class="w-1/6 bg-amber-500 rounded-t h-3/5"></div>
+                    <div class="w-1/6 bg-amber-500 rounded-t h-full"></div>
+                </div>
+            </div>
+
+            <!-- Độ ẩm không khí (DHT11) Card -->
+            <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant flex flex-col justify-between shadow-sm">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Ẩm Không Khí</h3>
+                    <span class="material-symbols-outlined text-cyan-500">humidity_percentage</span>
+                </div>
+                <div class="text-3xl font-extrabold text-on-surface mb-2" id="metric-hum-val">62%</div>
+                <div class="h-6 w-full flex items-end gap-1 opacity-60">
+                    <div class="w-1/6 bg-cyan-500 rounded-t h-3/5"></div>
+                    <div class="w-1/6 bg-cyan-500 rounded-t h-4/5"></div>
+                    <div class="w-1/6 bg-cyan-500 rounded-t h-full"></div>
+                    <div class="w-1/6 bg-cyan-500 rounded-t h-3/5"></div>
+                    <div class="w-1/6 bg-cyan-500 rounded-t h-2/5"></div>
+                    <div class="w-1/6 bg-cyan-500 rounded-t h-4/5"></div>
+                </div>
+            </div>
+
+            <!-- Độ ẩm đất Card (Function 2) -->
+            <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant flex flex-col justify-between shadow-sm">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Độ ẩm đất</h3>
+                    <span class="material-symbols-outlined text-emerald-500">water_drop</span>
+                </div>
+                <div class="text-3xl font-extrabold text-on-surface mb-2" id="metric-soil-val">65%</div>
+                <div class="h-6 w-full flex items-end gap-1 opacity-60">
+                    <div class="w-1/6 bg-emerald-500 rounded-t h-3/5"></div>
+                    <div class="w-1/6 bg-emerald-500 rounded-t h-4/5"></div>
+                    <div class="w-1/6 bg-emerald-500 rounded-t h-full"></div>
+                    <div class="w-1/6 bg-emerald-500 rounded-t h-4/5"></div>
+                    <div class="w-1/6 bg-emerald-500 rounded-t h-2/5"></div>
+                    <div class="w-1/6 bg-emerald-500 rounded-t h-3/5"></div>
+                </div>
+            </div>
+
+            <!-- Cường độ sáng LDR Card (Function 3) -->
+            <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant flex flex-col justify-between shadow-sm">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Cường độ sáng (LDR)</h3>
+                    <span class="material-symbols-outlined text-purple-500">light_mode</span>
+                </div>
+                <div class="text-3xl font-extrabold text-on-surface mb-1" id="metric-light-val">450 Lux</div>
+                <div class="flex justify-between items-center">
+                    <span id="metric-light-state" class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800">Trời sáng ☀️</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- BENTO GRID: DEVICE CONTROLS & HISTORICAL ANALYTICS -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="controls-section">
+            
+            <!-- DEVICE CONTROL PANEL (FUNCTIONS 2, 3, 6) -->
+            <div class="lg:col-span-1 bg-surface-container-lowest rounded-xl border border-outline-variant p-5 flex flex-col gap-4 shadow-sm">
+                <div class="flex justify-between items-center border-b border-outline-variant pb-3">
+                    <h3 class="text-lg font-bold text-on-surface">Điều Khiển Thiết Bị</h3>
+                    <div class="flex bg-surface-container p-1 rounded-lg text-xs font-semibold">
+                        <button id="mode-auto-btn" class="px-2.5 py-1 rounded-md bg-primary-container text-on-primary-container transition-all">Auto</button>
+                        <button id="mode-manual-btn" class="px-2.5 py-1 rounded-md text-on-surface-variant transition-all">Manual</button>
+                    </div>
+                </div>
+
+                <!-- Bơm nước M1 Switch (Transistor T1 + Diode D1) -->
+                <div class="flex flex-col gap-1 bg-surface-container-low p-3.5 rounded-lg border border-outline-variant">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-emerald-600">water_pump</span>
+                            <div>
+                                <p class="text-sm font-semibold text-on-surface">Động Cơ Bơm M1</p>
+                                <p class="text-xs text-on-surface-variant">Transistor NPN T1 + Diode D1</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="pump-status-badge" class="text-xs font-bold px-2 py-0.5 rounded bg-gray-200 text-gray-700">Đang dừng</span>
+                            <label class="relative inline-block w-12 h-6 select-none cursor-pointer">
+                                <input type="checkbox" id="pump-toggle-switch" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bóng đèn sưởi L1 Switch (Relay SPDT K2) -->
+                <div class="flex flex-col gap-1 bg-surface-container-low p-3.5 rounded-lg border border-outline-variant">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-amber-600">lightbulb</span>
+                            <div>
+                                <p class="text-sm font-semibold text-on-surface">Bóng Đèn Sưởi L1</p>
+                                <p class="text-xs text-on-surface-variant">Relay SPDT K2 (Tự động khi tối)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="lamp-status-badge" class="text-xs font-bold px-2 py-0.5 rounded bg-gray-200 text-gray-700">Tắt</span>
+                            <label class="relative inline-block w-12 h-6 select-none cursor-pointer">
+                                <input type="checkbox" id="lamp-toggle-switch" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hệ thống Đèn LED RGB D2 Color Picker (Function 6) -->
+                <div class="flex flex-col gap-2 bg-surface-container-low p-3.5 rounded-lg border border-outline-variant">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-purple-600">palette</span>
+                            <p class="text-sm font-semibold text-on-surface">Đèn LED RGB D2</p>
+                        </div>
+                        <div class="w-6 h-6 rounded-full border-2 border-white shadow-sm" id="rgb-led-preview" style="background-color: #00FF88;"></div>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-on-surface-variant mt-1">
+                        <span>Chọn màu:</span>
+                        <input type="color" id="rgb-color-picker" class="w-8 h-8 rounded cursor-pointer border-0 bg-transparent" value="#00FF88">
+                        <span>Độ sáng: <strong id="rgb-brightness-value" class="text-on-surface">100%</strong></span>
+                        <input type="range" id="rgb-brightness-slider" min="0" max="100" value="100" class="w-20">
+                    </div>
+                </div>
+
+                <!-- Threshold Settings Input -->
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="bg-surface-container-low p-2.5 rounded-lg border border-outline-variant">
+                        <label class="block text-on-surface-variant font-semibold mb-1">Ngưỡng đất khô (%)</label>
+                        <input type="number" id="soil-threshold-input" value="35" class="w-full bg-white border border-outline-variant rounded px-2 py-1 text-on-surface">
+                    </div>
+                    <div class="bg-surface-container-low p-2.5 rounded-lg border border-outline-variant">
+                        <label class="block text-on-surface-variant font-semibold mb-1">Ngưỡng quá nhiệt (°C)</label>
+                        <input type="number" id="temp-threshold-input" value="38" class="w-full bg-white border border-outline-variant rounded px-2 py-1 text-on-surface">
+                    </div>
+                </div>
+
+                <button class="w-full bg-error text-on-error py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-red-700 transition-colors mt-auto">
+                    NGỪNG HỆ THỐNG KHẨN CẤP
+                </button>
+            </div>
+
+            <!-- HISTORICAL DATA & NOTIFICATIONS & AI BANNER -->
+            <div class="lg:col-span-2 flex flex-col gap-6" id="analytics-section">
+                
+                <!-- Line Chart Card (Functions 4 & 5) -->
+                <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-5 flex-1 flex flex-col shadow-sm">
+                    <div class="flex justify-between items-center mb-4 border-b border-outline-variant pb-2">
+                        <div>
+                            <h3 class="text-lg font-bold text-on-surface">Dữ Liệu Lịch Sử Môi Trường (Time-series)</h3>
+                            <p class="text-xs text-on-surface-variant">Nhiệt độ (°C) • Độ ẩm khí (%) • Độ ẩm đất (%)</p>
+                        </div>
+                    </div>
+                    <div class="flex-1 relative min-h-[260px] w-full">
+                        <canvas id="historyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Notifications List (Function 7) -->
+                <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-5 shadow-sm" id="alerts-section">
+                    <h3 class="text-lg font-bold text-on-surface border-b border-outline-variant pb-2 mb-3">Thông Báo Gần Đây</h3>
+                    <div class="flex flex-col gap-2 max-h-48 overflow-y-auto" id="alert-log-container">
+                        <div class="flex items-start gap-3 p-3 bg-surface rounded-lg">
+                            <span class="material-symbols-outlined text-primary-container">check_circle</span>
+                            <div>
+                                <p class="text-xs font-semibold text-on-surface">Hệ thống khởi động thành công</p>
+                                <p class="text-[11px] text-on-surface-variant mt-0.5">Vừa xong</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI BioSync Prediction Banner (Function 8) -->
+                <div class="bg-primary-container text-on-primary-container rounded-xl p-5 border border-primary shadow-sm flex flex-col gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-2xl">smart_toy</span>
+                        <h3 class="text-base font-bold">Phân Tích AI BioSync</h3>
+                    </div>
+                    <p class="text-xs leading-relaxed">
+                        Dựa trên dữ liệu chuỗi thời gian, độ ẩm đất và nhiệt độ hiện tại duy trì mức tối ưu. Hệ thống sẽ tự động bật máy bơm khi độ ẩm đất khô dưới ngưỡng cài đặt.
+                    </p>
+                    <div class="flex gap-2 mt-2">
+                        <button class="quick-prompt-btn bg-on-primary-container text-primary-container px-3 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 transition-all" data-prompt="Phân tích sức khỏe Terrarium">
+                            📊 Xem Đánh Giá Sức Khỏe
+                        </button>
+                        <button class="quick-prompt-btn bg-on-primary-container text-primary-container px-3 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 transition-all" data-prompt="Dự báo xu hướng nhiệt độ 24h">
+                            📈 Dự Báo 24h
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</main>
+
+<!-- FLOATING AI CHATBOT BUTTON & MODAL DRAWER (FUNCTION 8) -->
+<button id="open-ai-chat-btn" class="fixed bottom-6 right-6 w-14 h-14 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-lg z-50 transition-transform duration-200 hover:scale-110 active:scale-95" aria-label="AI Chatbot">
+    <span class="material-symbols-outlined text-3xl">smart_toy</span>
+</button>
+
+<!-- AI Chat Drawer Modal -->
+<div id="ai-chat-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-end">
+    <div class="w-full max-w-md bg-white h-full shadow-2xl flex flex-col p-5">
+        <div class="flex justify-between items-center border-b border-gray-200 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-2xl">smart_toy</span>
+                <h3 class="text-base font-bold text-gray-900">Trợ Lý AI Terrarium</h3>
+            </div>
+            <button id="close-ai-chat-btn" class="p-1 text-gray-500 hover:text-gray-800 rounded-full">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto flex flex-col gap-3 p-2 bg-gray-50 rounded-lg" id="chat-messages">
+            <div class="chat-bubble chat-bot bg-emerald-50 border border-emerald-200 text-gray-800 p-3 rounded-lg text-xs">
+                <div class="font-bold text-emerald-800 mb-1">Terrarium AI Assistant 🤖</div>
+                <div>Xin chào! Tôi có thể giúp bạn phân tích dữ liệu nhiệt độ, độ ẩm đất, dự đoán xu hướng môi trường hoặc gợi ý lịch tưới cây tối ưu.</div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-1.5 my-3">
+            <button class="quick-prompt-btn text-xs bg-gray-100 hover:bg-emerald-100 text-gray-700 px-2.5 py-1 rounded-full border border-gray-200" data-prompt="Phân tích sức khỏe Terrarium">📊 Sức khỏe Terrarium</button>
+            <button class="quick-prompt-btn text-xs bg-gray-100 hover:bg-emerald-100 text-gray-700 px-2.5 py-1 rounded-full border border-gray-200" data-prompt="Dự báo xu hướng nhiệt độ 24h">📈 Dự báo 24h</button>
+            <button class="quick-prompt-btn text-xs bg-gray-100 hover:bg-emerald-100 text-gray-700 px-2.5 py-1 rounded-full border border-gray-200" data-prompt="Khi nào cần bật máy bơm?">💧 Tư vấn tưới</button>
+        </div>
+
+        <div class="flex gap-2">
+            <input type="text" id="chat-input-field" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500" placeholder="Hỏi AI về trạng thái Terrarium...">
+            <button id="chat-send-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs">Gửi</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Application JS Logic -->
+<script src="js/config.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/lcdSimulator.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/aiChatbot.js"></script>
+<script src="js/app.js"></script>
+
+<script>
+    // Additional drawer toggle logic
+    document.addEventListener("DOMContentLoaded", () => {
+        const modal = document.getElementById("ai-chat-modal");
+        const openBtn = document.getElementById("open-ai-chat-btn");
+        const closeBtn = document.getElementById("close-ai-chat-btn");
+
+        if (openBtn && modal) {
+            openBtn.addEventListener("click", () => modal.classList.remove("hidden"));
+        }
+        if (closeBtn && modal) {
+            closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
+        }
+    });
+</script>
+
+</body>
+</html>

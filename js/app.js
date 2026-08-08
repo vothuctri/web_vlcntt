@@ -177,6 +177,52 @@
         }
     };
 
+    window.openChangePasswordModal = function () {
+        const modal = document.getElementById("change-password-modal");
+        const popup = document.getElementById("user-popup-menu");
+        if (popup) popup.classList.add("hidden");
+        if (modal) {
+            modal.classList.remove("hidden");
+            const msg = document.getElementById("pwd-change-msg");
+            if (msg) msg.classList.add("hidden");
+            const curInput = document.getElementById("current-pwd-input");
+            if (curInput) curInput.value = "";
+            const newInput = document.getElementById("new-pwd-input");
+            if (newInput) newInput.value = "";
+            const confirmInput = document.getElementById("confirm-pwd-input");
+            if (confirmInput) confirmInput.value = "";
+        }
+    };
+
+    window.closeChangePasswordModal = function () {
+        const modal = document.getElementById("change-password-modal");
+        if (modal) modal.classList.add("hidden");
+    };
+
+    window.saveNewPassword = function () {
+        const cur = document.getElementById("current-pwd-input")?.value;
+        const next = document.getElementById("new-pwd-input")?.value;
+        const confirm = document.getElementById("confirm-pwd-input")?.value;
+        const msg = document.getElementById("pwd-change-msg");
+
+        if (next !== confirm) {
+            if (msg) {
+                msg.textContent = "❌ Mật khẩu xác nhận không khớp!";
+                msg.className = "text-xs py-1.5 px-2 rounded-lg bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 block";
+            }
+            return;
+        }
+
+        if (msg) {
+            msg.textContent = "✅ Đổi mật khẩu thành công!";
+            msg.className = "text-xs py-1.5 px-2 rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 block";
+        }
+
+        setTimeout(() => {
+            window.closeChangePasswordModal();
+        }, 1200);
+    };
+
     /**
      * SỰ KIỆN UI & ĐIỀU KHIỂN
      */

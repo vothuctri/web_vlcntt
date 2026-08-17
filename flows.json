@@ -1,0 +1,147 @@
+[
+    {
+        "id": "4c843baa23199913",
+        "type": "tab",
+        "label": "Flow 2",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "aae75570eeed5c9a",
+        "type": "websocket out",
+        "z": "4c843baa23199913",
+        "name": "",
+        "server": "b1d42ed3ed392521",
+        "client": "",
+        "x": 410,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "a2b008f4e298f444",
+        "type": "mqtt in",
+        "z": "4c843baa23199913",
+        "name": "",
+        "topic": "smart_terrarium/nhom05/sensors",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "80e658950430133c",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 360,
+        "wires": [
+            [
+                "aae75570eeed5c9a"
+            ]
+        ]
+    },
+    {
+        "id": "fdf0669407ec47b9",
+        "type": "http in",
+        "z": "4c843baa23199913",
+        "name": "Nhận lệnh điều khiển",
+        "url": "/api/control",
+        "method": "post",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 160,
+        "y": 540,
+        "wires": [
+            [
+                "56d9722e1f130456",
+                "b6029eab5db26c0a"
+            ]
+        ]
+    },
+    {
+        "id": "4e1e76397cf2bc85",
+        "type": "mqtt out",
+        "z": "4c843baa23199913",
+        "name": "",
+        "topic": "smart_terrarium/nhom05/control",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "80e658950430133c",
+        "x": 390,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "56d9722e1f130456",
+        "type": "function",
+        "z": "4c843baa23199913",
+        "name": "function 1",
+        "func": "let data = msg.payload;\nlet commands = [];\n\n// Kiểm tra trạng thái máy bơm M1\nif (data.pump_status !== undefined) {\n    commands.push(\"PUMP:\" + (data.pump_status ? \"1\" : \"0\"));\n}\n\n// Kiểm tra trạng thái đèn sưởi L1\nif (data.lamp_status !== undefined) {\n    commands.push(\"LED:\" + (data.lamp_status ? \"1\" : \"0\"));\n}\n\n// Nếu có thay đổi chế độ Auto/Manual\nif (data.system_mode !== undefined) {\n    commands.push(\"MODE:\" + data.system_mode.toUpperCase());\n}\n\n// Trả về từng lệnh để gửi xuống MQTT\nif (commands.length > 0) {\n    // Nối các lệnh bằng dấu phẩy hoặc gửi lệnh đầu tiên (tùy cách Arduino của bạn tách chuỗi)\n    msg.payload = commands.join(\",\"); \n    return msg;\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 540,
+        "wires": [
+            [
+                "4e1e76397cf2bc85"
+            ]
+        ]
+    },
+    {
+        "id": "b6029eab5db26c0a",
+        "type": "http response",
+        "z": "4c843baa23199913",
+        "name": "Phản hồi Web",
+        "statusCode": "200",
+        "headers": {},
+        "x": 420,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "b1d42ed3ed392521",
+        "type": "websocket-listener",
+        "path": "/ws/iot",
+        "wholemsg": "false"
+    },
+    {
+        "id": "80e658950430133c",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "broker.emqx.io",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

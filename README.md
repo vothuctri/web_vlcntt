@@ -19,7 +19,7 @@
 5. **Chức năng 5 (Nguyễn Trung Kiên - 1.5đ):** Cơ sở dữ liệu (**Supabase Database**) & Biểu đồ Time-series: Đồ thị lịch sử đa đường (**Chart.js**) cho Nhiệt độ, Độ ẩm không khí và Độ ẩm đất, hỗ trợ xuất báo cáo **CSV UTF-8**.
 6. **Chức năng 6 (Nguyễn Minh Trí - 1.5đ):** Bảo mật hệ thống tài khoản được lưu trong database (**Supabase Authentication** - Đăng nhập, Duy trì phiên đăng nhập & Đổi mật khẩu).
 7. **Chức năng 7 (Nguyễn Trung Kiên - 2.0đ):** Dịch vụ gửi **Email cảnh báo (Supabase)** và Thông báo nhanh qua điện thoại (**Pushsafer REST API** khi quá nhiệt > 38°C hoặc cạn nước).
-8. **Chức năng 8 (Nguyễn Minh Trí - 1.5đ):** Dịch vụ Chatbot thông minh (**Google Gemini 1.5 Flash AI**) tư vấn sức khỏe Terrarium và dự báo xu hướng chuỗi thời gian 24h.
+8. **Chức năng 8 (Nguyễn Minh Trí - 1.5đ):** Dịch vụ Chatbot thông minh (**Google Gemini 3.5 Flash AI**) tư vấn sức khỏe Terrarium và dự báo xu hướng chuỗi thời gian 24h.
 
 ---
 

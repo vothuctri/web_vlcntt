@@ -828,6 +828,7 @@
      * ====================================================================
      */
     let lastSensorAlertTime = 0;
+    let lastNotificationServiceTime = 0;
 
     function processIncomingSensorData(data) {
         AppState.currentSensorData = { ...data };
@@ -879,14 +880,15 @@
             }
         }
 
-        // 4. Cảnh báo quá nhiệt (Throttle 10 giây/lần)
+        // 4. Cảnh báo quá nhiệt trên bảng nhật ký Dashboard (Throttle 10 giây/lần)
         if (data.temperature > AppState.tempMaxThreshold && (now - lastSensorAlertTime > 10000)) {
             lastSensorAlertTime = now;
-            addAlertLog("HIGH_TEMP", "CRITICAL", `🔥 CẢNH BÁO QUÁ NHIỆT: Nhiệt độ vượt ngưỡng (${data.temperature}°C > ${AppState.tempMaxThreshold}°C)!`);
+            addAlertLog("HIGH_TEMP", "CRITICAL", `🔥 CẢNH BÁO QUÁ NHIỆT: Nhiệt độ vượt ngưỡng (${data.temperature.toFixed(1)}°C > ${AppState.tempMaxThreshold}°C)!`);
         }
 
-        // 5. Kích hoạt Pushsafer & Email (Chức năng 7)
-        if (window.NotificationService && (now - lastSensorAlertTime > 15000)) {
+        // 5. Kích hoạt Pushsafer & Email (Chức năng 7 - có cooldown nội bộ độc lập)
+        if (window.NotificationService && (now - lastNotificationServiceTime > 15000)) {
+            lastNotificationServiceTime = now;
             window.NotificationService.checkAndTriggerAlerts(data, {
                 TEMP_MAX: AppState.tempMaxThreshold,
                 SOIL_MIN: AppState.soilThreshold

@@ -44,7 +44,7 @@ flowchart TD
 
     subgraph GATEWAY_ESP ["2. TẦNG GATEWAY ESP8266 (esp_wifi.ino)"]
         UNO_SEND -->|UART Rx/Tx| ESP_READ["loop(): Đọc Serial Buffer<br>(Dòng 43-49)"]
-        ESP_READ -->|Kiểm tra JSON {...}| ESP_PUB["client.publish()<br>(Dòng 50-52)<br>Topic: smart_terrarium/nhom05/sensors"]
+        ESP_READ -->|Kiểm tra chuỗi JSON hợp lệ| ESP_PUB["client.publish()<br>(Dòng 50-52)<br>Topic: smart_terrarium/nhom05/sensors"]
     end
 
     subgraph CLOUD_BROKER ["3. TẦNG CLOUD BROKER"]
@@ -84,7 +84,7 @@ sequenceDiagram
     par Hiển thị LCD Phần Cứng
         Uno->>LCD_HW: updateLCD(0) -> Ghi I2C dòng 1: "T:28.5°C H:70%"
     and Truyền Dữ Liệu Lên Gateway
-        Uno->>ESP: sendDataToESP() -> UART: {"temp":28.5,"hum":70,...}\n
+        Uno->>ESP: sendDataToESP() -> Gửi chuỗi JSON (temp, hum) qua UART
         ESP->>Broker: client.publish("smart_terrarium/nhom05/sensors", JSON)
         Broker->>Web: Đẩy gói tin qua WebSocket
     end
@@ -246,7 +246,7 @@ sequenceDiagram
     participant Supabase as Supabase Database
 
     Sensor->>Uno: Đo nhiệt độ tăng cao = 39.5°C
-    Uno->>ESP: UART Serial: {"temp":39.5,...}
+    Uno->>ESP: Gửi chuỗi JSON (temp=39.5°C) qua UART Serial
     ESP->>Web: MQTT publish -> Web tiếp nhận JSON
     Web->>Noti: checkAndTriggerAlerts(sensorData, thresholds) (Dòng 890)
     Note over Noti: Nhận diện temp = 39.5°C > TEMP_MAX (38°C)

@@ -1,6 +1,6 @@
 /**
  * Smart Terrarium IoT Dashboard - Historical Data Charts (Chart.js)
- * Vẽ biểu đồ thời gian thực & Truy vấn lịch sử thông số cảm biến
+ * Đáp ứng Chức năng 5: Cơ sở dữ liệu (Supabase) & Biểu đồ Time-series (Chart.js), hỗ trợ xuất CSV
  */
 
 (function (window) {
@@ -8,11 +8,16 @@
     let chartHistoryData = [];
 
     /**
-     * Khởi tạo Biểu đồ Chart.js
+     * Khởi tạo Biểu đồ Chart.js đa đường
      */
     function initChart() {
         const ctx = document.getElementById('historyChart');
         if (!ctx) return;
+
+        // Tránh khởi tạo đè biểu đồ cũ
+        if (mainChart) {
+            mainChart.destroy();
+        }
 
         mainChart = new Chart(ctx, {
             type: 'line',
@@ -22,8 +27,8 @@
                     {
                         label: 'Nhiệt độ (°C)',
                         data: [],
-                        borderColor: '#f59e0b', // Yellow / Amber
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderColor: '#f59e0b', // Màu Vàng / Hổ phách
+                        backgroundColor: 'rgba(245, 158, 11, 0.12)',
                         borderWidth: 2.5,
                         tension: 0.35,
                         fill: true,
@@ -34,7 +39,7 @@
                     {
                         label: 'Độ ẩm không khí (%)',
                         data: [],
-                        borderColor: '#06b6d4', // Cyan
+                        borderColor: '#06b6d4', // Màu Cyan
                         backgroundColor: 'rgba(6, 182, 212, 0.08)',
                         borderWidth: 2,
                         tension: 0.35,
@@ -46,7 +51,7 @@
                     {
                         label: 'Độ ẩm đất (%)',
                         data: [],
-                        borderColor: '#10b981', // Emerald Green
+                        borderColor: '#10b981', // Màu Xanh lá Emerald
                         backgroundColor: 'rgba(16, 185, 129, 0.08)',
                         borderWidth: 2,
                         borderDash: [4, 4],
@@ -68,11 +73,12 @@
                 plugins: {
                     legend: {
                         display: true,
+                        position: 'top',
                         labels: {
                             color: '#9ca3af',
-                            font: { family: 'Outfit, sans-serif', size: 12 },
+                            font: { family: 'Inter, sans-serif', size: 12 },
                             usePointStyle: true,
-                            padding: 18
+                            padding: 16
                         }
                     },
                     tooltip: {
@@ -113,6 +119,11 @@
                 }
             }
         });
+
+        // Nếu đã có dữ liệu trong bộ nhớ, nạp ngay vào biểu đồ mới
+        if (chartHistoryData && chartHistoryData.length > 0) {
+            loadDataSet(chartHistoryData);
+        }
     }
 
     /**
@@ -133,7 +144,7 @@
         mainChart.data.datasets[1].data.push(record.humidity);
         mainChart.data.datasets[2].data.push(record.soil_moisture);
 
-        // Giới hạn hiển thị 30 điểm trên biểu đồ
+        // Giới hạn hiển thị 30 điểm gần nhất trên màn hình để không bị nghẽn
         if (mainChart.data.labels.length > 30) {
             mainChart.data.labels.shift();
             mainChart.data.datasets[0].data.shift();
@@ -145,10 +156,10 @@
     }
 
     /**
-     * Thay đổi toàn bộ tập dữ liệu biểu đồ (Khi tải từ DB hoặc đổi khung thời gian)
+     * Nạp toàn bộ tập dữ liệu (Tải từ Cơ sở Dữ liệu Supabase)
      */
     function loadDataSet(dataList) {
-        if (!mainChart || !Array.isArray(dataList)) return;
+        if (!mainChart || !Array.isArray(dataList) || dataList.length === 0) return;
 
         chartHistoryData = [...dataList];
 
@@ -163,10 +174,25 @@
         mainChart.data.datasets[2].data = soils;
 
         mainChart.update();
+        console.log(`📊 Đã tải ${dataList.length} bản ghi lịch sử vào biểu đồ.`);
     }
 
     /**
-     * Xuất dữ liệu biểu đồ ra file CSV
+     * Tải dữ liệu lịch sử trực tiếp từ bảng `sensor_logs` của Supabase
+     */
+    async function loadFromSupabase(limit = 30) {
+        if (window.SupabaseService && window.SupabaseService.isConnected()) {
+            const dbData = await window.SupabaseService.fetchSensorHistory(limit);
+            if (dbData && dbData.length > 0) {
+                loadDataSet(dbData);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Xuất dữ liệu biểu đồ ra file CSV chuẩn UTF-8
      */
     function exportToCSV() {
         if (!chartHistoryData.length) {
@@ -174,7 +200,8 @@
             return;
         }
 
-        let csvContent = "data:text/csv;charset=utf-8,ThoiGian,NhietDo_C,DoAmKhaiKhi_%,DoAmDat_%,AnhSang_Lux,TroiToi\n";
+        // Tạo nội dung CSV với BOM UTF-8 để mở tiếng Việt trên Excel không bị lỗi font
+        let csvContent = "\uFEFFThoiGian,NhietDo_C,DoAmKhongKhi_%,DoAmDat_%,AnhSang_Lux,TroiToi\n";
 
         chartHistoryData.forEach(r => {
             const time = new Date(r.created_at || Date.now()).toLocaleString('vi-VN');
@@ -182,13 +209,17 @@
             csvContent += row + "\n";
         });
 
-        const encodedUri = encodeURI(csvContent);
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `terrarium_sensor_logs_${Date.now()}.csv`);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `biosync_sensor_logs_${new Date().toISOString().slice(0, 10)}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        console.log("📥 Đã xuất file CSV lịch sử dữ liệu cảm biến thành công!");
     }
 
     // Export module ra window.ChartService
@@ -196,6 +227,7 @@
         init: initChart,
         appendDataPoint: appendDataPoint,
         loadDataSet: loadDataSet,
+        loadFromSupabase: loadFromSupabase,
         exportToCSV: exportToCSV,
         getHistoryData: () => chartHistoryData
     };

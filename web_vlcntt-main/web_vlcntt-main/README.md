@@ -1,84 +1,61 @@
-# 🌿 Smart Terrarium IoT Web Dashboard (Stitch UI + Supabase)
+# 🌿 BioSync - Smart Terrarium IoT Web Dashboard
 
-Mã nguồn Giao diện Web Dashboard quản lý và giám sát Mô hình Terrarium Thông minh, sử dụng chuẩn thiết kế **Stitch UI** hiện đại, kết nối cơ sở dữ liệu thời gian thực **Supabase (Realtime PostgreSQL)** và đáp ứng 100% các chức năng trong Proposal.
-
----
-
-## 🎨 Tính năng Nổi bật & Chức năng Proposal
-
-1. **LCD 16x2 I2C Display Simulator (Chức năng 1):** Mô phỏng màn hình LCD 1602 vi điều khiển (đọc từ DHT11) trên giao diện Web theo phong cách vi phông chữ pixel retro chân thực.
-2. **Độ ẩm Đất & Động cơ Bơm M1 (Chức năng 2):** Giám sát độ ẩm đất, công tắc điều khiển Bơm M1 (Transistor T1 + Diode D1), chế độ bơm tự động khi đất khô.
-3. **Quang trở LDR & Relay L1 (Chức năng 3):** Nhận biết trạng thái Trời sáng/Tối (LM393) và điều khiển Bóng đèn sưởi L1 qua Relay SPDT K2.
-4. **Đồng bộ dữ liệu Realtime (Chức năng 4):** Lắng nghe dữ liệu thời gian thực giữa ESP8266 và Web qua Supabase WebSockets.
-5. **Cơ sở dữ liệu & Biểu đồ Time-series (Chức năng 5):** Đồ thị lịch sử đa đường (Chart.js) cho Nhiệt độ, Độ ẩm không khí & đất, hỗ trợ xuất CSV.
-6. **Điều khiển Từ xa & LED RGB D2 (Chức năng 6):** Bộ chọn màu LED RGB D2 (Color Picker + Brightness Slider) và bảng điều khiển thiết bị từ xa 2 chiều.
-7. **Cảnh báo & Nhật ký Ngưỡng an toàn (Chức năng 7):** Hiển thị cảnh báo quá nhiệt và nhật ký sự kiện thời gian thực.
-8. **Chatbot AI & Phân tích Dự đoán (Chức năng 8):** Trợ lý AI tư vấn tình trạng hệ sinh thái, phân tích sức khỏe cây trồng & dự báo xu hướng môi trường.
+**ĐỒ ÁN CUỐI KỲ MÔN VẬT LÝ CHO CÔNG NGHỆ THÔNG TIN - NHÓM 05 (LỚP 24C03)**
+- **Thành viên 1:** Võ Thúc Trí - MSSV: 24127570
+- **Thành viên 2:** Nguyễn Trung Kiên - MSSV: 24127068
+- **Thành viên 3:** Nguyễn Minh Trí - MSSV: 24127569
 
 ---
 
-## 🚀 Hướng dẫn Sử dụng & Khởi chạy
+## 🎨 Danh Sách 8 Chức Năng Hoàn Chỉnh (Khớp 100% Báo Cáo)
 
-### 1. Khởi chạy Web tại địa phương (Local Dev)
-Bạn có thể mở trực tiếp file `index.html` bằng trình duyệt web bất kỳ (Chrome, Edge, Firefox) hoặc chạy qua bất kỳ web server tĩnh nào (ví dụ: Live Server trong VS Code, `npx serve`, v.v.).
+### I. Chức Năng Căn Bản (Basic Features)
+1. **Chức năng 1 (Nguyễn Trung Kiên):** Cảm biến nhiệt độ DHT11, Màn hình LCD 16x2 I2C (PCF8574 Simulator retro trên Web).
+2. **Chức năng 2 (Võ Thúc Trí):** Cảm biến độ ẩm đất SMS-V1, Động cơ máy bơm M1 (Tự động tưới khi đất khô dưới ngưỡng 35%).
+3. **Chức năng 3 (Nguyễn Minh Trí):** Cảm biến ánh sáng LM393 (Quang trở LDR), Điều khiển Đèn LED chiếu sáng & LED RGB (Đổi từ bóng đèn sưởi relay sang Đèn LED).
 
-> 💡 **Chế độ Simulator:** Hệ thống được tích hợp sẵn bộ phát sinh dữ liệu cảm biến giả lập. Khi chưa kết nối Supabase, Web sẽ tự động chạy mượt mà để bạn Demo giao diện & kiểm thử tính năng!
-
----
-
-### 2. Cấu hình Kết nối Supabase (Chuyển sang Cloud Data thật)
-
-1. **Bước 1:** Truy cập [Supabase.com](https://supabase.com), tạo một Project mới (Miễn phí).
-2. **Bước 2:** Vào mục **SQL Editor** trong Supabase Dashboard -> Copy nội dung file `supabase/schema.sql` -> Dán vào và nhấn **Run** để khởi tạo các bảng (`sensor_logs`, `device_controls`, `alert_logs`) và bật Realtime.
-3. **Bước 3:** Vào **Project Settings** -> **API** -> Copy `Project URL` và `anon public key`.
-4. **Bước 4:** Mở file `js/config.js` trong thư mục web và cập nhật thông tin:
-
-```javascript
-window.APP_CONFIG = {
-    SUPABASE_URL: "https://xxx.supabase.co", // Điền URL của bạn
-    SUPABASE_ANON_KEY: "eyJhbGciOi...",      // Điền Anon key của bạn
-    ENABLE_SIMULATOR: false                 // Tắt simulator để dùng dữ liệu thật
-};
-```
+### II. Chức Năng Nâng Cao (Advanced Features)
+4. **Chức năng 4 (Võ Thúc Trí - 1.5đ):** Board Arduino Uno R3 tích hợp WiFi ESP8266 gửi dữ liệu lên nền tảng Cloud IoT. Lắng nghe dữ liệu thời gian thực giữa ESP8266 và Web qua **Supabase WebSockets (Realtime PostgreSQL)**.
+5. **Chức năng 5 (Nguyễn Trung Kiên - 1.5đ):** Cơ sở dữ liệu (**Supabase Database**) & Biểu đồ Time-series: Đồ thị lịch sử đa đường (**Chart.js**) cho Nhiệt độ, Độ ẩm không khí và Độ ẩm đất, hỗ trợ xuất báo cáo **CSV UTF-8**.
+6. **Chức năng 6 (Nguyễn Minh Trí - 1.5đ):** Bảo mật hệ thống tài khoản được lưu trong database (**Supabase Authentication** - Đăng nhập, Duy trì phiên đăng nhập & Đổi mật khẩu).
+7. **Chức năng 7 (Nguyễn Trung Kiên - 2.0đ):** Dịch vụ gửi **Email cảnh báo (Supabase)** và Thông báo nhanh qua điện thoại (**Pushsafer REST API** khi quá nhiệt > 38°C hoặc cạn nước).
+8. **Chức năng 8 (Nguyễn Minh Trí - 1.5đ):** Dịch vụ Chatbot thông minh (**Google Gemini 1.5 Flash AI**) tư vấn sức khỏe Terrarium và dự báo xu hướng chuỗi thời gian 24h.
 
 ---
 
-## 📡 Cấu trúc Gửi Dữ liệu từ ESP8266 lên Supabase (Giao tiếp REST API)
+## 🚀 Hướng Dẫn Khởi Chạy & Kiểm Thử
 
-Vi điều khiển ESP8266 (hoặc Arduino Uno WiFi) chỉ cần gửi HTTP POST đơn giản lên Supabase REST API endpoint mà không cần thư viện phức tạp:
+### 1. Khởi chạy Web tại Local
+Mở trực tiếp file `index.html` bằng trình duyệt (Chrome, Edge, Firefox) hoặc dùng Live Server trong VS Code.
+> 💡 **Simulator Mode:** Web tích hợp sẵn bộ phát sinh dữ liệu cảm biến ngẫu nhiên theo thời gian thực để demo mượt mà ngay cả khi không có kết nối phần cứng.
 
-- **Endpoint:** `https://<YOUR_SUPABASE_PROJECT_ID>.supabase.co/rest/v1/sensor_logs`
-- **Headers:**
-  - `apikey: <YOUR_SUPABASE_ANON_KEY>`
-  - `Authorization: Bearer <YOUR_SUPABASE_ANON_KEY>`
-  - `Content-Type: application/json`
-- **JSON Body:**
-```json
-{
-  "temperature": 28.5,
-  "humidity": 65.0,
-  "soil_moisture": 42.0,
-  "light_level": 450.0,
-  "is_dark": false
-}
-```
+### 2. Cài đặt Cơ sở dữ liệu Supabase
+1. Vào [Supabase Dashboard](https://supabase.com), tạo project mới.
+2. Mở mục **SQL Editor**, copy toàn bộ nội dung file `supabase/schema.sql` dán vào và nhấn **Run**.
+3. Vào **Settings -> API**, copy URL và `anon public key` dán vào tab **Cài Đặt & Cấu Hình** trên Dashboard.
+
+### 3. Cấu hình Thông báo Pushsafer & Gemini AI
+1. **Pushsafer:** Đăng ký tài khoản tại [pushsafer.com](https://www.pushsafer.com), copy **Private Key** dán vào tab **Cài Đặt** trên Web để nhận thông báo về app trên điện thoại.
+2. **Gemini AI:** Lấy API Key miễn phí tại [aistudio.google.com](https://aistudio.google.com/app/apikey) dán vào tab **Cài Đặt** để kích hoạt trợ lý AI Gemini.
 
 ---
 
-## 📁 Cấu trúc Mã nguồn Dự án
+## 📁 Cấu Trúc Mã Nguồn
 
 ```text
-d:\web_vlcntt\
-├── index.html              # Trang Dashboard chính (Stitch UI HTML structure)
-├── css\
-│   └── styles.css          # Design System Stitch UI, Glassmorphism, Responsive CSS
-├── js\
-│   ├── config.js           # Cấu hình Supabase & Cài đặt Simulator Mode
-│   ├── supabaseClient.js   # Khởi tạo Supabase Client SDK & WebSocket Realtime listener
-│   ├── lcdSimulator.js     # Mô phỏng màn hình LCD 16x2 I2C (PCF8574)
-│   ├── charts.js           # Khởi tạo và vẽ biểu đồ lịch sử Chart.js + Xuất CSV
-│   ├── aiChatbot.js        # Động cơ suy luận AI Chatbot & Dự báo xu hướng
-│   └── app.js              # Logic ứng dụng chính & xử lý sự kiện UI
-└── supabase\
-    └── schema.sql          # Script khởi tạo Database SQL 1-click trên Supabase
+web_vlcntt-main/
+├── index.html                  # Giao diện chính 4 Tab & Cấu trúc Tailwind CSS
+├── css/
+│   └── styles.css              # Custom CSS styles
+├── js/
+│   ├── config.js               # File cấu hình Supabase, Pushsafer & Gemini
+│   ├── supabaseClient.js       # Module Supabase Auth, DB Query & WebSockets Realtime
+│   ├── notificationService.js  # Module Pushsafer REST API & Email Alert
+│   ├── nodeRedClient.js        # Module giao tiếp Backend Node-RED (Arduino)
+│   ├── lcdSimulator.js         # Mô phỏng màn hình LCD 16x2 I2C (PCF8574)
+│   ├── charts.js               # Biểu đồ lịch sử Chart.js & Xuất file CSV
+│   ├── aiChatbot.js            # Trợ lý Gemini 1.5 Flash AI & Động cơ phân tích
+│   └── app.js                  # Điều phối trạng thái chính & Xử lý sự kiện UI
+└── supabase/
+    └── schema.sql              # Script SQL 1-click tạo bảng & Realtime
 ```

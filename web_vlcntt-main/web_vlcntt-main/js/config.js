@@ -1,38 +1,39 @@
 /**
  * Smart Terrarium IoT Dashboard - Configuration
- * Tệp cấu hình kết nối Node-RED (ESP32 Backend), Supabase & Ngưỡng hệ thống
+ * Tệp cấu hình kết nối Supabase, Pushsafer, Google Gemini AI & Cài đặt hệ thống
  */
 
 window.APP_CONFIG = {
-    // 1. Cấu hình Backend Node-RED (Trung gian kết nối ESP32 qua MQTT & WebSocket)
-    // ESP32 -> MQTT (broker.emqx.io:1883) -> Node-RED -> WebSocket -> Web Frontend
-    NODE_RED_HOST: window.location.hostname || "localhost", // Thay bằng IP máy chạy Node-RED nếu khác máy
-    NODE_RED_PORT: 1880,
-    NODE_RED_WS_PATH: "/ws/iot",
-    NODE_RED_API_PATH: "/api/control",
+    // 1. CẤU HÌNH CƠ SỞ DỮ LIỆU SUPABASE (Chức năng 4, 5, 6)
+    // URL project Supabase (không bao gồm đuôi /rest/v1/)
+    SUPABASE_URL: localStorage.getItem("biosync_supabase_url") || "https://qkholkseaivgjcvanokj.supabase.co",
+    SUPABASE_ANON_KEY: localStorage.getItem("biosync_supabase_key") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFraG9sa3NlYWl2Z2pjdmFub2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwMTIzMjksImV4cCI6MjEwMjU4ODMyOX0.CyfpMgv9EI0g1_s0HIAiBNqWfATm4Ls08h1NQyjZXww",
 
-    // MQTT Topics theo flow Node-RED (flows.json):
-    // - Topic nhận dữ liệu từ ESP32: "smart_terrarium/nhom05/sensors"
-    // - Topic gửi lệnh điều khiển xuống ESP32: "smart_terrarium/nhom05/control"
-    // - Broker: broker.emqx.io (Port 1883)
+    // 2. CẤU HÌNH THÔNG BÁO PUSHSAFER QUA ĐIỆN THOẠI & EMAIL (Chức năng 7)
+    // Lấy Private Key từ https://www.pushsafer.com/ -> Dashboard -> Private Key
+    PUSHSAFER_PRIVATE_KEY: localStorage.getItem("biosync_pushsafer_key") || "nPGDjvwHIsj0IsfHpiLO", 
+    NOTIFICATION_EMAIL: localStorage.getItem("biosync_alert_email") || "vthuctri@gmail.com",
+    ENABLE_PUSHSAFER: true,
+    ENABLE_EMAIL_ALERT: true,
+    ALERT_COOLDOWN_MS: 60000, // Thời gian chờ tối thiểu giữa 2 lần gửi thông báo đẩy (1 phút)
 
-    // 2. Chế độ Mô phỏng Phần cứng (Hardware Simulator)
-    // Đặt false để ưu tiên nhận dữ liệu thực tế từ ESP32 qua Node-RED
-    // Nếu mất kết nối Node-RED, hệ thống có thể tự kích hoạt simulator dự phòng nếu cấu hình true
+    // 3. CẤU HÌNH TRỢ LÝ GOOGLE GEMINI AI (Chức năng 8)
+    // Lấy API Key miễn phí tại https://aistudio.google.com/app/apikey
+    GEMINI_API_KEY: localStorage.getItem("biosync_gemini_key") || "AQ.Ab8RN6J8DDj41I-y6jRba5GRqnKfj7rUxVZKCd2k8D4lkmwzQA",
+    GEMINI_MODEL: "gemini-3.5-flash-lite",
+
+    // 4. CHẾ ĐỘ MÔ PHỎNG PHẦN CỨNG (SIMULATOR)
+    // Để false để hiển thị dấu gạch ngang -- khi đang chờ mạch ESP8266 thật kết nối
     ENABLE_SIMULATOR: false,
-    SIMULATOR_INTERVAL_MS: 3000,
+    SIMULATOR_INTERVAL_MS: 3000, // Phát sinh dữ liệu mỗi 3 giây
 
-    // 3. Cấu hình Supabase (Tùy chọn lưu trữ Cloud Database)
-    SUPABASE_URL: "https://your-project-id.supabase.co",
-    SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    // 5. SỐ LƯỢNG BẢN GHI LỊCH SỬ BAN ĐẦU
+    MOCK_HISTORY_COUNT: 25,
 
-    // 4. Số điểm nạp dữ liệu ban đầu cho biểu đồ (Chart.js)
-    MOCK_HISTORY_COUNT: 15,
-
-    // 5. Ngưỡng an toàn mặc định cho hệ thống
+    // 6. NGƯỠNG AN TOÀN MẶC ĐỊNH
     DEFAULT_THRESHOLDS: {
         TEMP_MAX: 38.0,      // Báo động quá nhiệt khi > 38°C
-        SOIL_MIN: 35.0,      // Tự động kích hoạt máy bơm M1 khi độ ẩm đất < 35%
-        LIGHT_DARK_LIMIT: 30 // Cường độ ánh sáng < 30% (hoặc < 100 Lux) là Trời tối -> bật Relay Đèn L1
+        SOIL_MIN: 35.0,      // Tự động kích hoạt bơm M1 khi độ ẩm đất < 35%
+        LIGHT_DARK_LIMIT: 30 // Ánh sáng < 30% là Trời tối (kích hoạt Đèn LED L1)
     }
 };

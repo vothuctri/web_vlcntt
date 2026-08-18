@@ -37,27 +37,27 @@
 ```mermaid
 flowchart TD
     subgraph HARDWARE_UNO ["1. TẦNG PHẦN CỨNG ARDUINO UNO (do_an_cay.ino)"]
-        DHT["🌡️ Cảm biến DHT11 (Chân A2)"] -->|dht.readTemperature & readHumidity| UNO_READ["readSensors()<br>(Dòng 171-179)"]
-        UNO_READ -->|Giao tiếp I2C 0x27| LCD_HW["📟 Màn hình LCD 16x2 Phần Cứng<br>updateLCD(0) (Dòng 259-276)<br>Hiển thị: T:xx.x°C H:xx%"]
-        UNO_READ -->|Đóng gói JSON| UNO_SEND["sendDataToESP()<br>(Dòng 194-212)<br>Xuất UART Serial 9600"]
+        DHT["🌡️ Cảm biến DHT11 (Chân A2)"] -->|"Đọc tín hiệu nhiệt độ & độ ẩm"| UNO_READ["readSensors()<br>(Dòng 171-179)"]
+        UNO_READ -->|"Giao tiếp I2C 0x27"| LCD_HW["📟 Màn hình LCD 16x2 Phần Cứng<br>updateLCD(0) (Dòng 259-276)<br>Hiển thị: T:xx.x°C H:xx%"]
+        UNO_READ -->|"Đóng gói JSON"| UNO_SEND["sendDataToESP()<br>(Dòng 194-212)<br>Xuất UART Serial 9600"]
     end
 
     subgraph GATEWAY_ESP ["2. TẦNG GATEWAY ESP8266 (esp_wifi.ino)"]
-        UNO_SEND -->|UART Rx/Tx| ESP_READ["loop(): Đọc Serial Buffer<br>(Dòng 43-49)"]
-        ESP_READ -->|Kiểm tra chuỗi JSON hợp lệ| ESP_PUB["client.publish()<br>(Dòng 50-52)<br>Topic: smart_terrarium/nhom05/sensors"]
+        UNO_SEND -->|"UART Rx/Tx 9600"| ESP_READ["loop(): Đọc Serial Buffer<br>(Dòng 43-49)"]
+        ESP_READ -->|"Kiểm tra chuỗi JSON hợp lệ"| ESP_PUB["client.publish()<br>(Dòng 50-52)<br>Topic: smart_terrarium/nhom05/sensors"]
     end
 
     subgraph CLOUD_BROKER ["3. TẦNG CLOUD BROKER"]
-        ESP_PUB -->|TCP/IP Wi-Fi| BROKER["☁️ MQTT Broker (broker.emqx.io:1883)"]
+        ESP_PUB -->|"TCP/IP Wi-Fi"| BROKER["☁️ MQTT Broker (broker.emqx.io:1883)"]
     end
 
     subgraph WEB_DASHBOARD ["4. TẦNG WEB DASHBOARD & SIMULATOR"]
-        BROKER -->|WebSocket WSS| WEB_RECV["mqttClient.js & app.js<br>processIncomingSensorData(data)<br>(Dòng 832-845)"]
+        BROKER -->|"WebSocket WSS"| WEB_RECV["mqttClient.js & app.js<br>processIncomingSensorData(data)<br>(Dòng 832-845)"]
         
-        WEB_RECV -->|Cập nhật giao diện| WEB_METRIC["updateMetricCards(data)<br>(Dòng 897-912)<br>Thẻ Nhiệt Độ (°C) & Độ Ẩm (%)"]
+        WEB_RECV -->|"Cập nhật giao diện"| WEB_METRIC["updateMetricCards(data)<br>(Dòng 897-912)<br>Thẻ Nhiệt Độ (°C) & Độ Ẩm (%)"]
         
-        WEB_RECV -->|Cập nhật LCD ảo| LCD_SIM["lcdSimulator.js<br>updateFromSensors(temp, hum, ...)<br>(Dòng 48-62)"]
-        LCD_SIM -->|pad16(l1)| LCD_DOM["🖥️ Render HTML DOM (#lcd-line-1)<br>Hiển thị: Temp:xx.xC H:xx%"]
+        WEB_RECV -->|"Cập nhật LCD ảo"| LCD_SIM["lcdSimulator.js<br>updateFromSensors(temp, hum, ...)<br>(Dòng 48-62)"]
+        LCD_SIM -->|"Định dạng 16 ký tự pad16"| LCD_DOM["🖥️ Render HTML DOM (#lcd-line-1)<br>Hiển thị: Temp:xx.xC H:xx%"]
     end
 ```
 
@@ -213,19 +213,19 @@ flowchart TD
     TRIG --> PROC["⚙️ Xử lý tại notificationService.js & app.js<br>• checkAndTriggerAlerts()<br>• sendDeviceNotification()<br>• sendResetPinCode()"]
 
     subgraph PUSHSAFER_GATEWAY ["1. THÔNG BÁO ĐIỆN THOẠI REALTIME (PUSHSAFER REST API)"]
-        PROC -->|Gọi hàm| PUSH_FUNC["sendPushsaferNotification()<br>(notificationService.js: Dòng 16-68)"]
-        PUSH_FUNC -->|HTTP POST URLSearchParams| PUSH_API["🌐 https://www.pushsafer.com/api<br>(k: PrivateKey, t: Title, m: Message, i: 82, pr: 2)"]
-        PUSH_API -->|Đẩy Apple APNs / Google FCM| PHONE["📱 Điện Thoại Người Dùng<br>(App Pushsafer rung & đổ chuông)"]
+        PROC -->|"Gọi hàm gửi Pushsafer"| PUSH_FUNC["sendPushsaferNotification()<br>(notificationService.js: Dòng 16-68)"]
+        PUSH_FUNC -->|"HTTP POST URLSearchParams"| PUSH_API["🌐 https://www.pushsafer.com/api<br>(k: PrivateKey, t: Title, m: Message, i: 82, pr: 2)"]
+        PUSH_API -->|"Đẩy thông báo APNs / FCM"| PHONE["📱 Điện Thoại Người Dùng<br>(App Pushsafer rung & đổ chuông)"]
     end
 
     subgraph EMAIL_SUPABASE_GATEWAY ["2. DỊCH VỤ EMAIL & ĐỒNG BỘ SUPABASE DATABASE"]
-        PROC -->|Gọi hàm| MAIL_FUNC["sendEmailNotification()<br>(notificationService.js: Dòng 76-124)"]
-        MAIL_FUNC -->|HTTP POST JSON Table| MAIL_API["📧 FormSubmit REST API<br>(https://formsubmit.co/ajax/vthuctri@gmail.com)"]
-        MAIL_API -->|Chuyển phát SMTP| GMAIL["📬 Hòm thư Gmail Người Dùng<br>(Email bảng HTML trực quan)"]
+        PROC -->|"Gọi hàm gửi Email"| MAIL_FUNC["sendEmailNotification()<br>(notificationService.js: Dòng 76-124)"]
+        MAIL_FUNC -->|"HTTP POST JSON Table"| MAIL_API["📧 FormSubmit REST API<br>(https://formsubmit.co/ajax/vthuctri@gmail.com)"]
+        MAIL_API -->|"Chuyển phát SMTP"| GMAIL["📬 Hòm thư Gmail Người Dùng<br>(Email bảng HTML trực quan)"]
 
-        MAIL_FUNC -->|Ghi nhật ký hệ thống| SP_FUNC["pushAlertLog()<br>(supabaseClient.js: Dòng 346-364)"]
-        SP_FUNC -->|INSERT| SP_DB[("🗄️ Supabase PostgreSQL<br>Bảng: alert_logs")]
-        SP_DB -->|Realtime Channels| TABS["🖥️ Đồng bộ nhật ký tức thì trên Web"]
+        MAIL_FUNC -->|"Ghi nhật ký hệ thống"| SP_FUNC["pushAlertLog()<br>(supabaseClient.js: Dòng 346-364)"]
+        SP_FUNC -->|"INSERT"| SP_DB[("🗄️ Supabase PostgreSQL<br>Bảng: alert_logs")]
+        SP_DB -->|"Realtime Channels"| TABS["🖥️ Đồng bộ nhật ký tức thì trên Web"]
     end
 ```
 

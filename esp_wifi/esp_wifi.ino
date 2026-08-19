@@ -69,7 +69,7 @@ void setupWiFi() {
   }
 }
 
-// ================= HÀM XỬ LÝ KHI CÓ LỆNH ĐIỀU KHIỂN TỪ WEB / NODE-RED =================
+// ================= HÀM XỬ LÝ KHI CÓ LỆNH ĐIỀU KHIỂN TỪ WEB =================
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   String command = "";
   for (unsigned int i = 0; i < length; i++) {

@@ -192,7 +192,7 @@ void readSensors() {
 
 // ================= GỬI DỮ LIỆU JSON CHO ESP8266 & SERIAL MONITOR =================
 void sendDataToESP() {
-  // Đóng gói chuỗi JSON chuẩn cho ESP8266 / Node-RED / Supabase
+  // Đóng gói chuỗi JSON chuẩn cho ESP8266/Supabase
   // Ví dụ: {"temp":28.5,"hum":70,"soil":65,"ldr":80,"pump":0,"led":1,"auto":1}
   Serial.print(F("{\"temp\":"));
   Serial.print(temperature, 1);

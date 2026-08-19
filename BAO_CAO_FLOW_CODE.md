@@ -1,60 +1,64 @@
 # 🌿 BÁO CÁO FLOW CODE & SƠ ĐỒ HỆ THỐNG TRỌNG TÂM
 
-> **Tài liệu phân tích luồng code (Flow Code), sơ đồ khối, sơ đồ tuần tự và tra cứu dòng lệnh chi tiết cho 4 nhóm chức năng trọng tâm:**
-> 1. 🌡️📟 **NHÓM 1: Cảm biến nhiệt độ & độ ẩm DHT11 và Màn hình LCD 16x2 I2C** *(Khởi tạo $\rightarrow$ Đọc lấy mẫu $\rightarrow$ Đóng gói gửi UART/MQTT $\rightarrow$ Xử lý Backend/Broker $\rightarrow$ Hiển thị Frontend & Mô phỏng LCD $\rightarrow$ Lưu trữ & Realtime Supabase)*
-> 2. 📧📱 **NHÓM 2: Dịch vụ gửi Email (Supabase) & Thông báo nhanh qua điện thoại (Pushsafer)** *(Cảnh báo quá nhiệt DHT11, Thiết bị & Khôi phục tài khoản)*
-> 3. 📊📈 **NHÓM 3: Cơ sở dữ liệu (Supabase) & Biểu đồ Time-series đa đường (Chart.js)** *(Lưu trữ PostgreSQL Cloud, Realtime WebSockets, Biểu đồ trục kép & Xuất CSV)*
-> 4. 🔐🔑 **NHÓM 4: Bảo mật hệ thống & Quản lý tài khoản (Supabase Auth & OTP PIN)** *(Đăng nhập, Duy trì phiên đăng nhập, Đăng xuất, Quên mật khẩu qua mã OTP PIN 6 số)*
+> **Tài liệu phân tích luồng code (Flow Code), sơ đồ khối, sơ đồ tuần tự và tra cứu dòng lệnh chi tiết cho 5 nhóm chức năng trọng tâm:**
+> 1. 🌡️ **NHÓM 1: Cảm biến nhiệt độ & độ ẩm DHT11** *(Khởi tạo $\rightarrow$ Đọc lấy mẫu $\rightarrow$ Đóng gói gửi UART/MQTT $\rightarrow$ Xử lý Backend/Broker $\rightarrow$ Hiển thị Frontend Dashboard/Charts/Cảnh báo $\rightarrow$ Lưu trữ & Realtime Supabase)*
+> 2. 📟 **NHÓM 2: Màn hình LCD 16x2 I2C (Phần cứng & Mô phỏng Web)** *(Khởi tạo I2C 0x27 & DOM $\rightarrow$ Luân chuyển 2 trang Môi trường & Thiết bị $\rightarrow$ Cơ chế xuất chế độ Chủ động / Bị động $\rightarrow$ Bộ đệm chuẩn 16 ký tự `pad16` $\rightarrow$ Ma trận 16x2 ký tự)*
+> 3. 📧📱 **NHÓM 3: Dịch vụ gửi Email (Supabase) & Thông báo nhanh qua điện thoại (Pushsafer)** *(Cảnh báo quá nhiệt DHT11, Thiết bị & Khôi phục tài khoản)*
+> 4. 📊📈 **NHÓM 4: Cơ sở dữ liệu (Supabase) & Biểu đồ Time-series đa đường (Chart.js)** *(Lưu trữ PostgreSQL Cloud, Realtime WebSockets, Biểu đồ trục kép & Xuất CSV)*
+> 5. 🔐🔑 **NHÓM 5: Bảo mật hệ thống & Quản lý tài khoản (Supabase Auth & OTP PIN)** *(Đăng nhập, Duy trì phiên đăng nhập, Đăng xuất, Quên mật khẩu qua mã OTP PIN 6 số)*
 
 ---
 
 ## 📑 BẢNG TRA CỨU NHANH THEO CÁC NHÓM LOGIC (FILE - HÀM - DÒNG CODE)
 
-| Giai Đoạn / Nhóm Chức Năng | Tầng Hệ Thống | Tên File | Tên Hàm / Đoạn Code | Vị Trí Dòng Code | Nhiệm Vụ Chi Tiết |
+| Nhóm Chức Năng | Tầng Hệ Thống | Tên File | Tên Hàm / Đoạn Code | Vị Trí Dòng Code | Nhiệm Vụ Chi Tiết |
 | :--- | :--- | :--- | :--- | :---: | :--- |
-| **1. Khởi tạo DHT11 & Phần Cứng** | **Hardware Uno** | `do_an_cay/do_an_cay.ino` | `setup()` | **6 - 7, 31, 87 - 102** | Định nghĩa chân A2, khởi tạo đối tượng `DHT dht(A2, DHT11)`, `dht.begin()`, `lcd.init()` |
-| | **Gateway ESP8266** | `esp_wifi/esp_wifi.ino` | `setup()`, `setupWiFi()` | **23 - 33, 60 - 70** | Khởi tạo UART 9600, kết nối Wi-Fi trạm STA, cấu hình MQTT Broker `broker.emqx.io:1883` |
-| | **Web Frontend & DB** | `js/mqttClient.js` | `startMQTTConnection()` | **20 - 56** | Kết nối WebSocket MQTT `wss://broker.emqx.io:8084/mqtt`, đăng ký Topic Sensors |
-| | | `js/supabaseClient.js` | `initSupabase()` | **15 - 51** | Khởi tạo Supabase Client kết nối Cloud PostgreSQL với Anon Key |
-| **2. Đọc & Lấy Mẫu DHT11** | **Hardware Uno** | `do_an_cay/do_an_cay.ino` | `readSensors()` | **171 - 179** | Đọc nhiệt độ `dht.readTemperature()` & độ ẩm `dht.readHumidity()`, kiểm tra `!isnan()` |
-| | | `do_an_cay/do_an_cay.ino` | `updateLCD()` | **259 - 290** | Xuất số liệu tức thời `T:xx.x°C H:xx%` lên hàng 1 màn hình LCD 16x2 phần cứng |
-| **3. Đóng Gói & Gửi Dữ Liệu** | **Hardware Uno** | `do_an_cay/do_an_cay.ino` | `sendDataToESP()` | **194 - 212** | Đóng gói chuỗi JSON `{"temp":28.5,"hum":70,...}` xuất qua cổng UART Serial 9600 |
+| **1. Cảm biến DHT11** | **Hardware Uno** | `do_an_cay/do_an_cay.ino` | `setup()` | **6 - 7, 31, 87 - 89** | Định nghĩa chân A2, khởi tạo đối tượng `DHT dht(A2, DHT11)`, kích hoạt `dht.begin()` |
+| | | `do_an_cay/do_an_cay.ino` | `readSensors()` | **171 - 179** | Đọc nhiệt độ `dht.readTemperature()` & độ ẩm `dht.readHumidity()`, lọc nhiễu `!isnan()` |
+| | | `do_an_cay/do_an_cay.ino` | `sendDataToESP()` | **194 - 212** | Đóng gói JSON `{"temp":28.5,"hum":70,...}` gửi qua UART Serial 9600 |
 | | **Gateway ESP8266** | `esp_wifi/esp_wifi.ino` | `loop()` | **42 - 57** | Đọc chuỗi JSON từ Serial buffer, kiểm tra hợp lệ và Publish lên Topic Sensors |
-| **4. Xử Lý Backend / Broker** | **Cloud Broker** | `broker.emqx.io` | Port 1883 & 8084 (WSS) | *Tầng Trung Gian* | Định tuyến và chuyển tiếp các bản tin Sensor Telemetry tới tất cả Web Clients |
-| **5. Xử Lý Frontend & Giao Diện** | **Web Core** | `js/mqttClient.js` | `client.on("message")` | **57 - 128** | Nhận payload, bóc tách `temp`/`hum`, cập nhật thẻ DOM, gọi biểu đồ và LCD Simulator |
+| | **Web Frontend & Charts**| `js/mqttClient.js` | `client.on("message")` | **57 - 128** | Nhận payload MQTT, bóc tách `temp`/`hum`, gán `#metric-temp-val`, `#metric-hum-val` |
 | | | `js/app.js` | `processIncomingSensorData()` | **832 - 897** | Điều phối dữ liệu cảm biến, kiểm tra cảnh báo quá nhiệt `temp > 38°C` |
-| | | `js/app.js` | `updateMetricCards()` | **899 - 915** | Ghi số đo nhiệt độ vào `#metric-temp-val` và độ ẩm vào `#metric-hum-val` |
-| | **Mô Phỏng LCD** | `js/lcdSimulator.js` | `updateFromSensors()` | **48 - 68** | Tạo chuỗi `Temp:xx.xC H:xx%` và ghi ra phần tử DOM `#lcd-line-1` qua `pad16()` |
-| | **Engine Biểu Đồ** | `js/charts.js` | `appendDataPoint()` | **132 - 156** | Đẩy điểm nhiệt độ vào trục trái (`yTemp`) và độ ẩm vào trục phải (`yPercent`) |
-| **6. Lưu Trữ & Realtime Supabase** | **Supabase DB** | `supabase/schema.sql` | Table `sensor_logs` | **6 - 15, 49, 54** | Bảng PostgreSQL lưu trữ `temperature`, `humidity`, kích hoạt RLS & Realtime |
+| | | `js/charts.js` | `appendDataPoint()` | **132 - 156** | Đẩy điểm nhiệt độ vào trục trái (`yTemp`) và độ ẩm vào trục phải (`yPercent`) |
+| | **Supabase DB** | `supabase/schema.sql` | Table `sensor_logs` | **6 - 15, 49, 54** | Bảng PostgreSQL lưu trữ `temperature`, `humidity`, kích hoạt RLS & Realtime |
 | | | `js/supabaseClient.js` | `pushSensorData()` | **327 - 344** | Ghi bản ghi cảm biến mới vào bảng `sensor_logs` trên Supabase Cloud |
-| | | `js/supabaseClient.js` | `subscribeRealtime()` | **191 - 233** | Lắng nghe WebSocket sự kiện `INSERT` trên bảng `sensor_logs` |
-| | | `js/supabaseClient.js` | `fetchSensorHistory()` | **240 - 262** | Truy vấn lịch sử chuỗi thời gian vẽ biểu đồ ban đầu (Cold Start) |
 | | | `js/charts.js` | `exportToCSV()` | **197 - 223** | Trích xuất toàn bộ dữ liệu đo đạc DHT11 ra file CSV UTF-8 (BOM) cho Excel |
-| **Email & Pushsafer Cảnh Báo** | **Pushsafer (Phone)** | `js/notificationService.js`| `sendPushsaferNotification()`| **16 - 68** | Gửi HTTP POST tới Pushsafer API đẩy thông báo khẩn khi DHT11 quá nhiệt (>38°C) |
+| **2. Màn hình LCD 16x2**| **Hardware Uno** | `do_an_cay/do_an_cay.ino` | `setup()` | **90 - 102** | Khởi tạo `lcd.init()`, `lcd.backlight()`, nạp ký tự độ `°C` và hiển thị Splash Screen |
+| | | `do_an_cay/do_an_cay.ino` | `updateLCD()` | **259 - 290** | Luân chuyển 2 trang: Trang 1 (`T:..C H:..%`), Trang 2 (`Che do: TU DONG/THU CONG`) |
+| | | `do_an_cay/do_an_cay.ino` | `parseCommand()` | **230 - 256** | Giải mã lệnh `MODE:AUTO` / `MODE:MANUAL` từ Web để đổi biến `isAutoMode` |
+| | **Gateway ESP8266** | `esp_wifi/esp_wifi.ino` | `mqttCallback()` | **73 - 85** | Nhận lệnh `MODE:AUTO/MANUAL` từ Topic Control bắn xuống Uno qua Serial |
+| | **Web Dashboard** | `js/app.js` | `setSystemMode()` | **672 - 697** | Xử lý thao tác bấm nút chế độ của user, gửi lệnh MQTT `MODE:AUTO/MANUAL` |
+| | **Mô phỏng LCD** | `js/lcdSimulator.js` | `updateFromSensors()` | **48 - 68** | Định dạng chuỗi `Temp:xx.xC H:xx%` (Dòng 1) và `Soil:xx% [AUTO/MANUAL]` (Dòng 2) |
+| | | `js/lcdSimulator.js` | `pad16()`, `updateDisplay()` | **15 - 42** | Cắt/đệm chuẩn 16 ký tự và ghi vào DOM HTML `#lcd-line-1`, `#lcd-line-2` |
+| **3. Email & Pushsafer**| **Pushsafer (Phone)** | `js/notificationService.js`| `sendPushsaferNotification()`| **16 - 68** | Gửi HTTP POST tới Pushsafer API đẩy thông báo khẩn khi DHT11 quá nhiệt (>38°C) |
 | | **Email & Supabase** | `js/notificationService.js`| `sendEmailNotification()` | **76 - 124** | Gửi Email HTML qua FormSubmit API và gọi `pushAlertLog()` lưu bảng `alert_logs` |
-| **Xác Thực & Bảo Mật Auth** | **Supabase Auth** | `js/supabaseClient.js` | `signInWithPassword()` | **58 - 95** | Xác thực tài khoản đăng nhập bảo mật qua Supabase Auth API / Bcrypt RPC |
 | | | `js/app.js` | `sendResetPinCode()` | **239 - 300** | Sinh mã PIN 6 số, lưu Supabase (`save_reset_pin`) và gửi Email khôi phục |
+| **4. Database & Charts**| **Supabase DB** | `js/supabaseClient.js` | `subscribeRealtime()` | **191 - 233** | Lắng nghe WebSocket sự kiện `INSERT` trên bảng `sensor_logs` |
+| | | `js/supabaseClient.js` | `fetchSensorHistory()` | **240 - 262** | Truy vấn lịch sử chuỗi thời gian vẽ biểu đồ ban đầu (Cold Start) |
+| | **Engine Biểu Đồ** | `js/charts.js` | `initChart()` | **13 - 127** | Khởi tạo Chart.js đa đường với 2 trục Y (`yTemp` °C và `yPercent` %) |
+| **5. Auth & Quên Mật Khẩu**| **Supabase Auth** | `js/supabaseClient.js` | `signInWithPassword()` | **58 - 95** | Xác thực tài khoản đăng nhập bảo mật qua Supabase Auth API / Bcrypt RPC |
+| | | `js/supabaseClient.js` | `resetPasswordWithPin()` | **152 - 168** | Gọi Supabase RPC function xác thực PIN & đổi mật khẩu mới |
+| | **App Core Auth** | `js/app.js` | `checkAuthSession()` | **107 - 125** | Tự động kiểm tra phiên đăng nhập đã lưu trong LocalStorage / Supabase Session |
+| | | `js/app.js` | `handleLogin()`, `handleLogout()` | **162 - 208** | Tiếp nhận Email/Password, gọi Supabase Auth và chuyển đổi View |
 
 ---
 
-# 🌡️📟 NHÓM 1: CẢM BIẾN NHIỆT ĐỘ & ĐỘ ẨM DHT11 VÀ MÀN HÌNH LCD 16x2 I2C
+# 🌡️ NHÓM 1: CẢM BIẾN NHIỆT ĐỘ & ĐỘ ẨM DHT11
 
-### 1.1. Sơ Đồ Khối Toàn Diện 6 Giai Đoạn Của Luồng DHT11 (End-to-End Flowchart)
+### 1.1. Sơ Đồ Khối Toàn Diện 6 Giai Đoạn Luồng DHT11 (End-to-End Flowchart)
 
 Luồng dữ liệu của cảm biến **DHT11** được thiết kế khép kín và phân tầng rõ ràng qua **6 giai đoạn** từ phần cứng đo đạc, truyền thông mạng, phân phối đám mây đến giao diện trực quan và lưu trữ cơ sở dữ liệu:
 
 ```mermaid
 flowchart TD
     subgraph STAGE1 ["1. GIAI ĐOẠN KHỞI TẠO (INITIALIZATION)"]
-        HW_INIT["Hardware Uno (do_an_cay.ino):<br>• #define DHTPIN A2, DHTTYPE DHT11<br>• DHT dht(DHTPIN, DHTTYPE)<br>• dht.begin() & lcd.init()"]
+        HW_INIT["Hardware Uno (do_an_cay.ino):<br>• #define DHTPIN A2, DHTTYPE DHT11<br>• DHT dht(DHTPIN, DHTTYPE)<br>• dht.begin()"]
         ESP_INIT["Gateway ESP8266 (esp_wifi.ino):<br>• Serial.begin(9600)<br>• WiFi.begin(ssid, pass)<br>• client.setServer(broker, 1883)"]
         WEB_INIT["Web Frontend & Supabase (js):<br>• mqttClient.js: wss://broker.emqx.io:8084<br>• supabaseClient.js: initSupabase()"]
     end
 
     subgraph STAGE2 ["2. GIAI ĐOẠN ĐỌC & LẤY MẪU (SAMPLING & READING)"]
         TIMER["Ngắt thời gian Non-blocking:<br>millis() - previousSensorRead >= 2000ms"] --> READ_DHT["readSensors() (do_an_cay.ino):<br>• t = dht.readTemperature()<br>• h = dht.readHumidity()<br>• Lọc nhiễu: if (!isnan(t) && !isnan(h))"]
-        READ_DHT --> LCD_LOCAL["updateLCD(0):<br>Xuất LCD 16x2 I2C Phần Cứng (Hàng 1):<br>T:xx.x°C H:xx%"]
     end
 
     subgraph STAGE3 ["3. GIAI ĐOẠN ĐÓNG GÓI & GỬI DỮ LIỆU (TRANSMISSION & GATEWAY)"]
@@ -72,7 +76,6 @@ flowchart TD
         JS_ONMSG --> APP_PROC["app.js: processIncomingSensorData(data)"]
         
         APP_PROC --> DOM_CARDS["updateMetricCards():<br>• #metric-temp-val -> 28.5°C<br>• #metric-hum-val -> 70%"]
-        APP_PROC --> LCD_SIM["lcdSimulator.js: updateFromSensors()<br>#lcd-line-1 -> 'Temp:28.5C H:70%'"]
         APP_PROC --> CHARTS["ChartService.appendDataPoint()<br>#historyChart & #quickViewChart (Chart.js)"]
         
         APP_PROC -->|"Nếu temp > 38°C"| ALARM["Kích hoạt Cảnh Báo Quá Nhiệt:<br>• Pushsafer Phone (Icon 82, Priority 2)<br>• Email FormSubmit HTML Table"]
@@ -95,19 +98,18 @@ flowchart TD
 
 ---
 
-### 1.2. Sơ Đồ Tuần Tự Toàn Diện Của Luồng DHT11 (Full Sequence Diagram)
+### 1.2. Sơ Đồ Tuần Tự Toàn Diện Luồng DHT11 (Full Sequence Diagram)
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant Sensor as 🌡️ DHT11 (Chân A2)
     participant Uno as 💻 Arduino Uno (do_an_cay.ino)
-    participant LCD_HW as 📟 LCD 16x2 I2C Phần Cứng
     participant ESP as 📡 ESP8266 Gateway (esp_wifi.ino)
     participant Broker as ☁️ EMQX MQTT Broker
     participant WebMQTT as 🌐 mqttClient.js
     participant AppCore as ⚙️ app.js
-    participant UI_DOM as 🖥️ Thẻ Đo & LCD Simulator
+    participant UI_DOM as 🖥️ Thẻ Đo Dashboard (#metric-temp-val)
     participant ChartEngine as 📈 charts.js (Chart.js)
     participant SupaDB as 🗄️ Supabase DB (sensor_logs)
     participant NotiService as 🚨 notificationService.js
@@ -117,31 +119,26 @@ sequenceDiagram
     Sensor-->>Uno: Trả về điện áp 1-Wire -> Chuyển đổi số: t = 28.5°C, h = 70.0%
     Uno->>Uno: Kiểm tra hợp lệ: !isnan(t) && !isnan(h)
     
-    par Hiển thị LCD 16x2 Tại Chỗ
-        Uno->>LCD_HW: updateLCD(0) -> Hàng 1: "T:28.5°C H:70%   "
-    and Đóng Gói JSON & Xuất UART Serial
-        Uno->>ESP: sendDataToESP() -> Serial.println("{\"temp\":28.5,\"hum\":70.0,...}")
-    end
+    Note over Uno, ESP: 2. Đóng Gói JSON & Xuất UART Serial
+    Uno->>ESP: sendDataToESP() -> Serial.println("{\"temp\":28.5,\"hum\":70.0,...}")
 
-    Note over ESP, Broker: 2. Gateway chuyển tiếp MQTT lên Cloud Broker
+    Note over ESP, Broker: 3. Gateway chuyển tiếp MQTT lên Cloud Broker
     ESP->>ESP: loop() nhận chuỗi JSON từ Serial buffer
     ESP->>Broker: client.publish("smart_terrarium/nhom05/sensors", JSON)
     Broker->>WebMQTT: Phân phối WebSocket (WSS Port 8084) tới trình duyệt
 
-    Note over WebMQTT, UI_DOM: 3. Xử lý Frontend, Cập nhật Giao diện & Biểu đồ
+    Note over WebMQTT, UI_DOM: 4. Xử lý Frontend, Cập nhật Giao diện & Biểu đồ
     WebMQTT->>WebMQTT: JSON.parse() -> data.temp = 28.5, data.hum = 70.0
     WebMQTT->>AppCore: processIncomingSensorData(mapped)
     
     par Cập nhật Thẻ Số Liệu Dashboard
         AppCore->>UI_DOM: updateMetricCards() -> #metric-temp-val ("28.5°C"), #metric-hum-val ("70%")
-    and Cập nhật LCD 16x2 Simulator
-        AppCore->>UI_DOM: LCDSimulator.updateFromSensors() -> #lcd-line-1 ("Temp:28.5C H:70%")
     and Vẽ Điểm Thời Gian Thực Lên Biểu Đồ
         AppCore->>ChartEngine: ChartService.appendDataPoint() & appendQuickChartPoint()
         ChartEngine->>UI_DOM: Cập nhật trục yTemp (trái) & yPercent (phải) trên Canvas
     end
 
-    Note over AppCore, SupaDB: 4. Lưu trữ Cơ sở Dữ liệu & Cảnh báo nếu Quá Nhiệt
+    Note over AppCore, SupaDB: 5. Lưu trữ Cơ sở Dữ liệu & Cảnh báo nếu Quá Nhiệt
     opt Lưu trữ Dữ liệu Lịch sử Chuỗi Thời Gian
         AppCore->>SupaDB: SupabaseService.pushSensorData(mapped) -> INSERT INTO sensor_logs
         SupaDB-->>WebMQTT: Realtime Event 'INSERT' (postgres_changes)
@@ -161,11 +158,11 @@ sequenceDiagram
 1. **Phần cứng Arduino Uno ([do_an_cay.ino](file:///d:/web_vlcntt/do_an_cay/do_an_cay.ino)):**
    * Định nghĩa chân dữ liệu `DHTPIN A2` và kiểu cảm biến `DHTTYPE DHT11` (Dòng 6 – 7).
    * Khởi tạo đối tượng toàn cục `DHT dht(DHTPIN, DHTTYPE)` (Dòng 31).
-   * Trong hàm `setup()` (Dòng 87 – 102): Gọi `dht.begin()` để kích hoạt giao tiếp 1-Wire, khởi tạo màn hình LCD I2C qua `lcd.init()`, bật đèn nền `lcd.backlight()` và nạp byte ký tự độ C `°` vào CGRAM địa chỉ 0 qua `lcd.createChar(0, degreeChar)`.
+   * Trong hàm `setup()` (Dòng 87 – 89): Gọi `dht.begin()` để kích hoạt giao tiếp 1-Wire.
 2. **Gateway ESP8266 ([esp_wifi.ino](file:///d:/web_vlcntt/esp_wifi/esp_wifi.ino)):**
    * Cấu hình Serial baudrate `9600` kết nối trực tiếp với Arduino Uno (Dòng 25).
    * Kết nối mạng Wi-Fi qua `setupWiFi()` ở chế độ `WIFI_STA` (Dòng 60 – 70).
-   * Cấu hình MQTT Broker `broker.emqx.io` cổng `1883` qua `client.setServer()` và đăng ký callback `mqttCallback` (Dòng 31 – 32).
+   * Cấu hình MQTT Broker `broker.emqx.io` cổng `1883` qua `client.setServer()` (Dòng 31 – 32).
 3. **Web Frontend & Supabase ([js/mqttClient.js](file:///d:/web_vlcntt/js/mqttClient.js) & [js/supabaseClient.js](file:///d:/web_vlcntt/js/supabaseClient.js)):**
    * Kết nối WebSocket bảo mật tới `wss://broker.emqx.io:8084/mqtt` và subscribe topic `smart_terrarium/nhom05/sensors` (Dòng 20 – 45 trong `mqttClient.js`).
    * Khởi tạo Supabase SDK qua `createClient(SUPABASE_URL, SUPABASE_ANON_KEY)` (Dòng 15 – 51 trong `supabaseClient.js`).
@@ -188,9 +185,6 @@ sequenceDiagram
     ...
   }
   ```
-* **Xuất màn hình LCD 16x2 phần cứng (`updateLCD(0)`, Dòng 259 – 315):**
-  Khi `currentScreen == 0`, Arduino Uno ghi trực tiếp lên hàng 0 của LCD:
-  `T:[temperature]°C H:[humidity]%` (Ví dụ: `T:28.5°C H:70%   `).
 
 ---
 
@@ -229,9 +223,7 @@ sequenceDiagram
 #### Giai Đoạn 4: Xử Lý Backend & Cloud Broker
 * **MQTT Broker (`broker.emqx.io:1883` / WSS `8084`):**
   Đóng vai trò là trung tâm phân phối dữ liệu (Message Broker), chuyển tiếp gói tin từ ESP8266 tới toàn bộ các Client đã kết nối qua giao thức WebSocket WSS bảo mật.
-* **Topic phân luồng rõ ràng:**
-  * Topic gửi cảm biến: `smart_terrarium/nhom05/sensors`
-  * Topic nhận lệnh điều khiển: `smart_terrarium/nhom05/control`
+* **Topic phân luồng:** `smart_terrarium/nhom05/sensors`.
 
 ---
 
@@ -253,14 +245,11 @@ sequenceDiagram
   1. **Thẻ đo Dashboard (`updateMetricCards()`, Dòng 899 – 915 trong `app.js`):**
      * Gán `mapped.temperature.toFixed(1) + "°C"` vào `#metric-temp-val` ([index.html: Dòng 438](file:///d:/web_vlcntt/index.html#L438)).
      * Gán `mapped.humidity.toFixed(0) + "%"` vào `#metric-hum-val` ([index.html: Dòng 455](file:///d:/web_vlcntt/index.html#L455)).
-  2. **Màn hình LCD 16x2 Simulator (`updateFromSensors()`, Dòng 48 – 68 trong `lcdSimulator.js`):**
-     * Dòng 1 LCD: `Temp:28.5C H:70%` được đệm chuẩn 16 ký tự qua hàm `pad16()` và đưa vào `#lcd-line-1` ([index.html: Dòng 547](file:///d:/web_vlcntt/index.html#L547)).
-     * Dòng 2 LCD: `Soil:65% Lgt:DARK` đưa vào `#lcd-line-2` ([index.html: Dòng 548](file:///d:/web_vlcntt/index.html#L548)).
-  3. **Vẽ biểu đồ thời gian thực (`ChartService.appendDataPoint()`, Dòng 132 – 156 trong `charts.js`):**
+  2. **Vẽ biểu đồ thời gian thực (`ChartService.appendDataPoint()`, Dòng 132 – 156 trong `charts.js`):**
      * Đẩy `mapped.temperature` vào Dataset 0 (trục trái `yTemp` màu Hổ phách `#f59e0b`).
      * Đẩy `mapped.humidity` vào Dataset 1 (trục phải `yPercent` màu Cyan `#06b6d4`).
      * Gọi `mainChart.update('none')` để render 60 FPS mượt mà không giật lag.
-  4. **Kích hoạt cảnh báo quá nhiệt (`processIncomingSensorData()`, Dòng 884 – 897 trong `app.js`):**
+  3. **Kích hoạt cảnh báo quá nhiệt (`processIncomingSensorData()`, Dòng 884 – 897 trong `app.js`):**
      * Nếu `data.temperature > AppState.tempMaxThreshold` (ngưỡng mặc định `38.0°C`), hệ thống tự động ghi nhật ký cảnh báo và gọi `NotificationService.checkAndTriggerAlerts()` để bắn thông báo khẩn qua Pushsafer và Email.
 
 ---
@@ -308,16 +297,123 @@ sequenceDiagram
 | :--- | :--- | :--- | :--- | :--- |
 | **1. Cảm biến DHT11** | Chân tín hiệu Data (A2) | Xung điện áp 1-Wire | Tín hiệu xung 40-bit | 16-bit độ ẩm + 16-bit nhiệt độ + 8-bit checksum |
 | **2. Arduino Uno** | Thư viện `DHT.h` | `float` (IEEE 754) | `temperature`, `humidity` | `temperature = 28.5`, `humidity = 70.0` |
-| **3. LCD 16x2 Hardware** | IC I2C PCF8574 (0x27) | Ký tự ASCII 16x2 | Hàng 0: `T:xx.x°C H:xx%` | `T:28.5°C H:70%   ` |
-| **4. Truyền UART & MQTT** | Serial Uno $\rightarrow$ ESP8266 | Chuỗi JSON chuẩn | `{"temp": float, "hum": float}`| `{"temp":28.5,"hum":70.0,"soil":65,...}` |
+| **3. Truyền UART & MQTT** | Serial Uno $\rightarrow$ ESP8266 | Chuỗi JSON chuẩn | `{"temp": float, "hum": float}`| `{"temp":28.5,"hum":70.0,"soil":65,...}` |
+| **4. Cloud MQTT Broker** | EMQX Cloud (1883/8084) | JSON over WebSocket | `smart_terrarium/nhom05/sensors` | Gói tin JSON thời gian thực |
 | **5. Frontend Web** | `mqttClient.js` & `app.js` | Object JS & DOM Text | `mapped.temperature`, `mapped.humidity` | `#metric-temp-val`: `28.5°C`, `#metric-hum-val`: `70%` |
-| **6. LCD Simulator Web** | `lcdSimulator.js` | DOM String 16 ký tự | `#lcd-line-1` (`pad16`) | `Temp:28.5C H:70%` (16 ký tự) |
-| **7. Supabase Database** | PostgreSQL Cloud | Table `sensor_logs` | `temperature`, `humidity` | `temperature: 28.50`, `humidity: 70.00` |
-| **8. Báo Cáo CSV** | `charts.js` | File CSV UTF-8 BOM | `NhietDo_C`, `DoAmKhongKhi_%` | `"2026-08-19 13:00:00",28.5,70,65,800,KHONG` |
+| **6. Supabase Database** | PostgreSQL Cloud | Table `sensor_logs` | `temperature`, `humidity` | `temperature: 28.50`, `humidity: 70.00` |
+| **7. Báo Cáo CSV** | `charts.js` | File CSV UTF-8 BOM | `NhietDo_C`, `DoAmKhongKhi_%` | `"2026-08-19 13:00:00",28.5,70,65,800,KHONG` |
 
 ---
 
-### 1.5. Luồng Xuất Chế Độ Chủ Động / Bị Động Từ Thao Tác Người Dùng Lên LCD 16x2
+### 1.5. Vị Trí Cụ Thể Trên Giao Diện Frontend ([index.html](file:///d:/web_vlcntt/index.html))
+
+| Tên Khối Giao Diện | File Nguồn | ID Phần Tử DOM | Vị Trí Dòng Code | Chức Năng Hiển Thị |
+| :--- | :--- | :--- | :---: | :--- |
+| **Thẻ Đo Nhiệt Độ Dashboard**| `index.html`| `#metric-temp-val` | **Dòng 438** | Thẻ lớn hiển thị số đo nhiệt độ tức thời (°C) từ DHT11 |
+| **Thẻ Đo Độ Ẩm Dashboard** | `index.html` | `#metric-hum-val` | **Dòng 455** | Thẻ lớn hiển thị số đo độ ẩm không khí (%) từ DHT11 |
+| **Canvas Biểu Đồ Dashboard**| `index.html` | `#quickViewChart`| **Dòng 395** | Vùng vẽ biểu đồ nhanh tại trang Tổng quan |
+| **Canvas Biểu Đồ Analytics**| `index.html` | `#historyChart` | **Dòng 578** | Vùng vẽ biểu đồ phân tích đa đường toàn diện |
+
+---
+
+# 📟 NHÓM 2: MÀN HÌNH LCD 16X2 I2C (PHẦN CỨNG & MÔ PHỎNG WEB)
+
+### 2.1. Sơ Đồ Khối Toàn Diện Luồng LCD 16x2 (Hardware & Web Simulator)
+
+```mermaid
+flowchart TD
+    subgraph HARDWARE_TIER ["1. TẦNG PHẦN CỨNG ARDUINO UNO (do_an_cay.ino)"]
+        INIT_LCD["setup():<br>• lcd.init()<br>• lcd.backlight()<br>• lcd.createChar(0, degreeChar)"]
+        
+        TIMER_LCD["Ngắt thời gian 3.5s:<br>currentMillis - previousScreenSwitch >= 3500ms"] --> SWITCH_PAGE{"currentScreen = (currentScreen + 1) % 2"}
+        
+        SWITCH_PAGE -->|"currentScreen = 0"| P0_HW["Trang 0 (Môi Trường):<br>• Hàng 0: T:xx.x°C H:xx%<br>• Hàng 1: Dat:xx% LDR:xx%"]
+        SWITCH_PAGE -->|"currentScreen = 1"| P1_HW["Trang 1 (Thiết Bị & Chế Độ):<br>• Hàng 0: B:ON/OFF LED:ON/OFF<br>• Hàng 1: Che do: TU DONG / THU CONG"]
+        
+        P0_HW --> LCD_PHYSICAL["📟 Màn Hình LCD 16x2 I2C (Địa chỉ 0x27)"]
+        P1_HW --> LCD_PHYSICAL
+    end
+
+    subgraph TRANSMISSION_TIER ["2. TẦNG TRUYỀN THÔNG & ĐỒNG BỘ CHẾ ĐỘ"]
+        WEB_CLICK["Thao tác Web: Chọn Tự Động / Thủ Công<br>setSystemMode(mode) (app.js: Dòng 672)"] --> MQTT_SEND["MQTT Publish: smart_terrarium/nhom05/control<br>Payload: 'MODE:AUTO' hoặc 'MODE:MANUAL'"]
+        MQTT_SEND --> ESP_RELAY["ESP8266: mqttCallback()<br>Bắn UART Serial xuống Uno"]
+        ESP_RELAY --> UNO_PARSE["Arduino Uno: parseCommand()<br>Cập nhật biến toàn cục: isAutoMode"]
+        UNO_PARSE -.-> P1_HW
+    end
+
+    subgraph WEB_SIMULATOR ["3. TẦNG MÔ PHỎNG LCD 16X2 TRÊN WEB (lcdSimulator.js)"]
+        WEB_CLICK --> SIM_UPDATE["LCDSimulator.updateFromSensors()<br>& updateDeviceStatus()"]
+        SIM_UPDATE --> PAD_FUNC["pad16(str): Cắt/đệm chuẩn 16 ký tự"]
+        PAD_FUNC --> DOM_LINE1["📍 #lcd-line-1 (index.html: Dòng 547)<br>Ví dụ: 'Temp:28.5C H:70%'"]
+        PAD_FUNC --> DOM_LINE2["📍 #lcd-line-2 (index.html: Dòng 548)<br>Ví dụ: 'Soil:65% [AUTO]'"]
+    end
+```
+
+---
+
+### 2.2. Sơ Đồ Tuần Tự Luân Chuyển Trang & Cập Nhật LCD (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Uno as Arduino Uno (do_an_cay.ino)
+    participant LCD_HW as LCD 16x2 Phần Cứng (I2C)
+    participant WebUser as Người Dùng (Web Dashboard)
+    participant AppCore as app.js
+    participant MQTT as MQTT Broker
+    participant ESP as ESP8266 Gateway
+    participant LCD_Sim as lcdSimulator.js
+    participant DOM_LCD as Khung DOM LCD (#lcd-line-1, #lcd-line-2)
+
+    Note over Uno, LCD_HW: 1. Luân chuyển 2 trang màn hình LCD phần cứng mỗi 3.5 giây
+    alt currentScreen == 0 (Trang Môi Trường)
+        Uno->>LCD_HW: updateLCD(0) -> Hàng 0: "T:28.5°C H:70%   ", Hàng 1: "Dat:65%  LDR:80% "
+    else currentScreen == 1 (Trang Thiết Bị & Chế Độ)
+        Uno->>LCD_HW: updateLCD(1) -> Hàng 0: "B:OFF  LED:ON    ", Hàng 1: "Che do: TU DONG "
+    end
+
+    Note over WebUser, DOM_LCD: 2. Đồng bộ chế độ từ Web xuống LCD Phần cứng & LCD Mô phỏng
+    WebUser->>AppCore: Nhấn chọn Chế độ Thủ Công (#mode-manual-btn)
+    AppCore->>AppCore: setSystemMode('manual') (Dòng 672)
+    AppCore->>LCD_Sim: updateFromSensors(..., isAutoMode=false)
+    LCD_Sim->>DOM_LCD: pad16() -> Cập nhật #lcd-line-2: "Soil:65% [MANUAL]"
+
+    AppCore->>MQTT: MQTTService.sendCommand("MODE:MANUAL") (Dòng 693)
+    MQTT->>ESP: mqttCallback() nhận payload: "MODE:MANUAL"
+    ESP->>Uno: Serial.println("MODE:MANUAL") (Dòng 83)
+    Uno->>Uno: parseCommand() -> isAutoMode = false (Dòng 254)
+    Uno->>LCD_HW: updateLCD(1) -> Hàng 1 hiển thị tức thì: "Che do: THU CONG"
+```
+
+---
+
+### 2.3. Bảng Ma Trận 16x2 Ký Tự (Hardware LCD & Web Simulator)
+
+#### A. Màn hình LCD 16x2 Phần Cứng (Luân chuyển mỗi 3.5 giây qua `updateLCD()`)
+```text
+Trang 0 (Môi Trường):
+[Hàng 0] | T | : | 2 | 8 | . | 5 | ° | C |   | H | : | 7 | 0 | % |   |   | (16 ký tự)
+[Hàng 1] | D | a | t | : | 6 | 5 | % |   |   | L | D | R | : | 8 | 0 | % | (16 ký tự)
+
+Trang 1 (Thiết Bị & Chế Độ):
+[Hàng 0] | B | : | O | F | F |   |   | L | E | D | : | O | N |   |   |   | (16 ký tự)
+[Hàng 1] | C | h | e |   | d | o | : |   | T | U |   | D | O | N | G |   | (16 ký tự)
+```
+
+#### B. Màn hình LCD 16x2 Mô Phỏng Web (`lcdSimulator.js` $\rightarrow$ `#tab-analytics`)
+```text
+Trang Cảm Biến:
+[Dòng 1 - #lcd-line-1] | T | e | m | p | : | 2 | 8 | . | 5 | C |   | H | : | 7 | 0 | % | (16 ký tự)
+[Dòng 2 - #lcd-line-2] | S | o | i | l | : | 6 | 5 | % |   | [ | A | U | T | O | ] |   | (16 ký tự)
+
+Trang Thiết Bị & Chế Độ (updateDeviceStatus):
+[Dòng 1 - #lcd-line-1] | B | : | O | F | F |   |   | L | E | D | : | O | N |   |   |   | (16 ký tự)
+[Dòng 2 - #lcd-line-2] | C | h | e |   | d | o | : |   | T | H | U |   | C | O | N | G | (16 ký tự)
+```
+
+---
+
+### 2.4. Luồng Xuất Chế Độ Vận Hành Chủ Động (Auto) / Bị Động (Manual) Lên LCD 16x2
 
 ```mermaid
 flowchart TD
@@ -354,24 +450,135 @@ flowchart TD
 
 ---
 
-### 1.6. Vị Trí Cụ Thể Trên Giao Diện Frontend ([index.html](file:///d:/web_vlcntt/index.html))
+### 2.5. Bảng Đối Soát Hành Động Người Dùng $\rightarrow$ Dữ Liệu LCD 16x2
+
+| Thao Tác Của Người Dùng | Hàm JS Kích Hoạt | Lệnh Gửi MQTT / Serial | Trạng Thái `isAutoMode` | Hiển Thị LCD Phần Cứng (Trang 1 Dòng 1) | Hiển Thị LCD Mô Phỏng Web (Dòng 2) |
+| :--- | :--- | :--- | :---: | :--- | :--- |
+| **Bấm nút [Tự Động]** | `setSystemMode('auto')` | `"MODE:AUTO"` | `true` (Chủ động) | `Che do: TU DONG ` | `Soil:xx% [AUTO]  ` |
+| **Bấm nút [Thủ Công]** | `setSystemMode('manual')`| `"MODE:MANUAL"` | `false` (Bị động) | `Che do: THU CONG` | `Soil:xx% [MANUAL]` |
+| **Bấm BẬT Máy Bơm M1** | `turnOnPump()` | `"PUMP:1"` | `false` (Bị động) | `B:ON   Che do: THU CONG` | `Soil:xx% [MANUAL]` |
+| **Bấm TẮT Máy Bơm M1** | `turnOffPump()` | `"PUMP:0"` | `false` (Bị động) | `B:OFF  Che do: THU CONG` | `Soil:xx% [MANUAL]` |
+| **Bấm BẬT Đèn LED L1** | `turnOnLamp()` | `"LED:1"` | `false` (Bị động) | `LED:ON Che do: THU CONG` | `Soil:xx% [MANUAL]` |
+| **Bấm TẮT Đèn LED L1** | `turnOffLamp()` | `"LED:0"` | `false` (Bị động) | `LED:OFF Che do: THU CONG`| `Soil:xx% [MANUAL]` |
+
+---
+
+### 2.6. Vị Trí Cụ Thể Trên Giao Diện Frontend ([index.html](file:///d:/web_vlcntt/index.html))
 
 | Tên Khối Giao Diện | File Nguồn | ID Phần Tử DOM | Vị Trí Dòng Code | Chức Năng Hiển Thị |
 | :--- | :--- | :--- | :---: | :--- |
-| **Thẻ Đo Nhiệt Độ Dashboard**| `index.html`| `#metric-temp-val` | **Dòng 438** | Thẻ lớn hiển thị số đo nhiệt độ tức thời (°C) từ DHT11 |
-| **Thẻ Đo Độ Ẩm Dashboard** | `index.html` | `#metric-hum-val` | **Dòng 455** | Thẻ lớn hiển thị số đo độ ẩm không khí (%) từ DHT11 |
 | **Khung Màn hình LCD 16x2** | `index.html` | `#lcd-screen-container` | **Dòng 546** | Hộp chứa nền xanh LCD retro, viền phát sáng, chứa 2 dòng hiển thị |
 | **Dòng 1 LCD 16x2** | `index.html` | `#lcd-line-1` | **Dòng 547** | Hiển thị chuỗi Nhiệt độ & Độ ẩm DHT11 (`Temp:xx.xC H:xx%`) |
 | **Dòng 2 LCD 16x2** | `index.html` | `#lcd-line-2` | **Dòng 548** | Hiển thị chuỗi Độ ẩm đất & Trạng thái sáng (`Soil:xx% Lgt:DARK/SUNNY`) |
 | **Tab Chứa LCD Simulator** | `index.html` | `#tab-analytics` | **Dòng 524** | Tab Phân tích & Dự đoán (Analytics) trên thanh điều hướng |
-| **Thẻ Đo Độ Ẩm Đất** | `index.html` | `#metric-soil-val` | **Dòng 472** | Thẻ lớn hiển thị phần trăm độ ẩm đất (%) |
-| **Thẻ Đo Quang Trở LDR** | `index.html` | `#metric-light-val` | **Dòng 489** | Thẻ lớn hiển thị độ sáng Lux & trạng thái Ngày/Đêm |
 
 ---
 
-# 📧📱 NHÓM 2: DỊCH VỤ EMAIL (SUPABASE) & THÔNG BÁO NHANH QUA ĐIỆN THOẠI (PUSHSAFER)
+### 2.7. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 2)
 
-### 2.1. Sơ Đồ Khối Toàn Diện (End-to-End Flowchart)
+#### 1. Mạch Phần Cứng Arduino Uno ([do_an_cay.ino](file:///d:/web_vlcntt/do_an_cay/do_an_cay.ino))
+* **Khởi tạo chân & LCD I2C (`setup()`, Dòng 87 – 102):**
+  ```cpp
+  // Dòng 87-102 trong do_an_cay/do_an_cay.ino
+  dht.begin();
+  lcd.init();
+  lcd.backlight();
+  lcd.createChar(0, degreeChar); // Nạp byte ký tự °C vào CGRAM của LCD
+
+  lcd.setCursor(0, 0);
+  lcd.print("SMART TERRARIUM ");
+  lcd.setCursor(0, 1);
+  lcd.print("NHOM 05 - 24C03 ");
+  delay(2000);
+  lcd.clear();
+  ```
+
+* **Hiển thị luân phiên 2 trang lên LCD 16x2 I2C (`updateLCD()`, Dòng 259 – 290):**
+  ```cpp
+  // Dòng 259-290 trong do_an_cay/do_an_cay.ino
+  void updateLCD(int screen) {
+    if (screen == 0) {
+      // Trang 1: Thông số nhiệt độ, độ ẩm không khí & đất, ánh sáng
+      lcd.setCursor(0, 0);
+      lcd.print("T:");
+      lcd.print(temperature, 1);
+      lcd.write(0); // Ký tự độ °
+      lcd.print("C H:");
+      lcd.print(humidity, 0);
+      lcd.print("%   ");
+
+      lcd.setCursor(0, 1);
+      lcd.print("Dat:");
+      lcd.print(soilPercent);
+      lcd.print("%  LDR:");
+      lcd.print(ldrPercent);
+      lcd.print("%   ");
+    } 
+    else if (screen == 1) {
+      // Trang 2: Trạng thái Máy Bơm, Đèn LED & Chế độ vận hành
+      lcd.setCursor(0, 0);
+      lcd.print("B:");
+      lcd.print(pumpState ? "ON " : "OFF");
+      lcd.print(" LED:");
+      lcd.print(ledState ? "ON " : "OFF");
+      lcd.print("    ");
+
+      lcd.setCursor(0, 1);
+      lcd.print("Che do: ");
+      lcd.print(isAutoMode ? "TU DONG " : "THU CONG");
+    }
+  }
+  ```
+
+#### 2. Mô phỏng LCD 16x2 trên Web ([js/lcdSimulator.js](file:///d:/web_vlcntt/js/lcdSimulator.js))
+* **Khởi tạo DOM elements (`initLCD()`, Dòng 24 – 31):**
+  ```javascript
+  // Dòng 24-31 trong js/lcdSimulator.js
+  function initLCD() {
+      line1Element = document.getElementById("lcd-line-1");
+      line2Element = document.getElementById("lcd-line-2");
+      backlightElement = document.getElementById("lcd-screen-container");
+
+      updateDisplay("LCD 16x2 I2C READY", "DHT11 CONNECTED");
+  }
+  ```
+
+* **Định dạng số liệu dòng 1 & 2 (`updateFromSensors()`, Dòng 48 – 62):**
+  ```javascript
+  // Dòng 48-62 trong js/lcdSimulator.js
+  function updateFromSensors(temp, hum, soil, lightIsDark) {
+      const tStr = temp !== undefined ? temp.toFixed(1) : "--.-";
+      const hStr = hum !== undefined ? hum.toFixed(0) : "--";
+      const l1 = `Temp:${tStr}C H:${hStr}%`;
+
+      const sStr = soil !== undefined ? soil.toFixed(0) : "--";
+      const lightStr = lightIsDark ? "DARK" : "SUNNY";
+      const l2 = `Soil:${sStr}% Lgt:${lightStr}`;
+
+      updateDisplay(l1, l2);
+  }
+  ```
+
+* **Cắt đệm chuẩn 16 ký tự & Cập nhật DOM HTML (`pad16()` & `updateDisplay()`, Dòng 15 – 42):**
+  ```javascript
+  // Dòng 15-19 & 35-42 trong js/lcdSimulator.js
+  function pad16(str) {
+      if (!str) str = "";
+      if (str.length > 16) return str.substring(0, 16);
+      return str.padEnd(16, " ");
+  }
+
+  function updateDisplay(line1Text, line2Text) {
+      if (line1Element) line1Element.textContent = pad16(line1Text);
+      if (line2Element) line2Element.textContent = pad16(line2Text);
+  }
+  ```
+
+---
+
+# 📧📱 NHÓM 3: DỊCH VỤ EMAIL (SUPABASE) & THÔNG BÁO NHANH QUA ĐIỆN THOẠI (PUSHSAFER)
+
+### 3.1. Sơ Đồ Khối Toàn Diện (End-to-End Flowchart)
 
 ```mermaid
 flowchart TD
@@ -398,7 +605,7 @@ flowchart TD
 
 ---
 
-### 2.2. Sơ Đồ Tuần Tự Cảnh Báo Quá Nhiệt (Sequence Diagram)
+### 3.2. Sơ Đồ Tuần Tự Cảnh Báo Quá Nhiệt (Sequence Diagram)
 
 ```mermaid
 sequenceDiagram
@@ -431,7 +638,7 @@ sequenceDiagram
 
 ---
 
-### 2.3. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 2)
+### 3.3. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 3)
 
 #### 1. Thông Báo Nhanh Qua Điện Thoại (Pushsafer API)
 * **Gửi HTTP POST Pushsafer (`sendPushsaferNotification()`, Dòng 16 – 68 trong `js/notificationService.js`):**
@@ -441,6 +648,72 @@ sequenceDiagram
       k: privateKey.trim(),
       t: title || "Smart Terrarium Alert",
       m: message || "Thông báo từ hệ thống Terrarium",
+      s: options.sound !== undefined ? options.sound : "1",      // Chuông
+      v: options.vibrate !== undefined ? options.vibrate : "3",  // Rung mạnh
+      i: options.icon !== undefined ? options.icon : "82",       // Icon cảm biến
+      pr: options.priority !== undefined ? options.priority : "2" // Độ ưu tiên cao nhất
+  });
+
+  const response = await fetch("https://www.pushsafer.com/api", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString()
+  });
+  ```
+
+* **Tự động kích hoạt khi DHT11 quá nhiệt (`checkAndTriggerAlerts()`, Dòng 158 – 178 trong `js/notificationService.js`):**
+  ```javascript
+  // Dòng 163-169 trong js/notificationService.js
+  if (temp > thresholds.TEMP_MAX) {
+      const title = "🔥 CẢNH BÁO: QUÁ NHIỆT TERRARIUM!";
+      const msg = `Nhiệt độ hiện tại đạt ${temp.toFixed(1)}°C (vượt ngưỡng cho phép ${thresholds.TEMP_MAX}°C)...`;
+      
+      await sendPushsaferNotification(title, msg, { icon: 82, priority: 2 });
+      await sendEmailNotification(title, msg);
+  }
+  ```
+
+* **Thông báo Bật/Tắt thiết bị Bơm & Đèn (`sendDeviceNotification()`, Dòng 132 – 153 trong `js/notificationService.js`):**
+  Bắn Pushsafer thông báo khi máy bơm hoặc đèn bật/tắt (manual hoặc auto).
+
+---
+
+#### 2. Dịch Vụ Gửi Email & Đồng Bộ Supabase Database
+* **Gửi Email bảng HTML (`sendEmailNotification()`, Dòng 76 – 124 trong `js/notificationService.js`):**
+  ```javascript
+  // Dòng 90-104 trong js/notificationService.js
+  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(targetEmail)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({
+          _subject: `🌱 [Smart Terrarium Nhóm 05] ${subject || 'CẢNH BÁO HỆ THỐNG'}`,
+          "Tiêu Đề Cảnh Báo": subject,
+          "Nội Dung Chi Tiết": body,
+          "Hệ Thống Giám Sát": "BioSync Smart Terrarium - Lớp 24C03 (Nhóm 05)",
+          "Thời Gian Ghi Nhận": new Date().toLocaleString("vi-VN"),
+          _template: "table"
+      })
+  });
+  ```
+
+* **Ghi nhật ký vào bảng `alert_logs` Supabase (`pushAlertLog()`, Dòng 346 – 364 trong `js/supabaseClient.js`):**
+  ```javascript
+  // Dòng 351-358 trong js/supabaseClient.js
+  const { error } = await supabaseClient
+      .from('alert_logs')
+      .insert([{
+          alert_type: alertObj.alert_type || "EMAIL_NOTIFICATION",
+          severity: alertObj.severity || "WARNING",
+          message: alertObj.message || ""
+      }]);
+  ```
+
+* **Email Mã PIN Khôi Phục Tài Khoản (`sendResetPinCode()`, Dòng 239 – 300 trong `js/app.js`):**
+  Sinh mã PIN 6 số ngẫu nhiên, lưu vào Supabase và gửi qua Email FormSubmit để xác thực quên mật khẩu.
+
+---
+
+# 📊📈 NHÓM 4: CƠ SỞ DỮ LIỆU (SUPABASE) & BIỂU ĐỒ TIME-SERIES (CHART.JS)ng báo từ hệ thống Terrarium",
       s: options.sound !== undefined ? options.sound : "1",      // Chuông
       v: options.vibrate !== undefined ? options.vibrate : "3",  // Rung mạnh
       i: options.icon !== undefined ? options.icon : "82",       // Icon cảm biến

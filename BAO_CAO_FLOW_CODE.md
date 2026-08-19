@@ -646,6 +646,78 @@ sequenceDiagram
 ### 3.6. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 3)
 
 #### 1. Tầng Cơ Sở Dữ Liệu Supabase ([js/supabaseClient.js](file:///d:/web_vlcntt/js/supabaseClient.js))
+* **Hàm Ghi Dữ Liệu Cảm Biến Vào Database (`pushSensorData()`, Dòng 327 – 344):**
+  ```javascript
+  // Dòng 327-344 trong js/supabaseClient.js
+  async function pushSensorData(record) {
+      if (!supabaseClient) initSupabase();
+      if (!supabaseClient) return false;
+
+      try {
+          // Thực hiện lệnh INSERT vào bảng PostgreSQL 'sensor_logs'
+          const { error } = await supabaseClient
+              .from('sensor_logs')
+              .insert([record]);
+
+          if (error) {
+              console.warn("Lỗi pushSensorData:", error.message);
+              return false;
+          }
+          return true;
+      } catch (err) {
+          return false;
+      }
+  }
+  ```
+
+* **Hàm Ghi Nhật Ký Cảnh Báo Vào Database (`pushAlertLog()`, Dòng 346 – 364):**
+  ```javascript
+  // Dòng 346-364 trong js/supabaseClient.js
+  async function pushAlertLog(alertObj) {
+      if (!supabaseClient) initSupabase();
+      if (!supabaseClient) return false;
+
+      try {
+          const { error } = await supabaseClient
+              .from('alert_logs')
+              .insert([{
+                  alert_type: alertObj.alert_type || alertObj.type || "SYSTEM_WARN",
+                  severity: alertObj.severity || "INFO",
+                  message: alertObj.message || ""
+              }]);
+
+          if (error) return false;
+          return true;
+      } catch (err) {
+          return false;
+      }
+  }
+  ```
+
+* **Hàm Cập Nhật / Upsert Trạng Thái Điều Khiển Thiết Bị (`updateDeviceControls()`, Dòng 301 – 325):**
+  ```javascript
+  // Dòng 301-325 trong js/supabaseClient.js
+  async function updateDeviceControls(controlsPayload) {
+      if (!supabaseClient) initSupabase();
+      if (!supabaseClient) return false;
+
+      try {
+          const updateRecord = {
+              id: 1,
+              ...controlsPayload,
+              updated_at: new Date().toISOString()
+          };
+          const { error } = await supabaseClient
+              .from('device_controls')
+              .upsert(updateRecord);
+
+          return !error;
+      } catch (err) {
+          return false;
+      }
+  }
+  ```
+
 * **Lắng nghe WebSockets Realtime (`subscribeRealtime()`, Dòng 191 – 233):**
   ```javascript
   // Dòng 201-209 trong js/supabaseClient.js

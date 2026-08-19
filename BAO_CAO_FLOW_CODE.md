@@ -1,12 +1,13 @@
 # 🌿 BÁO CÁO FLOW CODE & SƠ ĐỒ HỆ THỐNG TRỌNG TÂM
 
-> **Tài liệu phân tích luồng code (Flow Code), sơ đồ khối, sơ đồ tuần tự và tra cứu dòng lệnh chi tiết cho 2 nhóm chức năng trọng tâm:**
+> **Tài liệu phân tích luồng code (Flow Code), sơ đồ khối, sơ đồ tuần tự và tra cứu dòng lệnh chi tiết cho 3 nhóm chức năng trọng tâm:**
 > 1. 🌡️📟 **NHÓM 1: Cảm biến nhiệt độ DHT11 & Màn hình LCD 16x2 I2C** *(Hardware Uno $\rightarrow$ Gateway ESP8266 $\rightarrow$ Web Dashboard & LCD Simulator)*
 > 2. 📧📱 **NHÓM 2: Dịch vụ gửi Email (Supabase) & Thông báo nhanh qua điện thoại (Pushsafer)** *(Cảnh báo quá nhiệt DHT11, Thiết bị & Khôi phục tài khoản)*
+> 3. 📊📈 **NHÓM 3: Cơ sở dữ liệu (Supabase) & Biểu đồ Time-series đa đường (Chart.js)** *(Lưu trữ PostgreSQL Cloud, Realtime WebSockets, Biểu đồ trục kép & Xuất CSV)*
 
 ---
 
-## 📑 BẢNG TRA CỨU NHANH THEO 2 NHÓM LOGIC (FILE - HÀM - DÒNG CODE)
+## 📑 BẢNG TRA CỨU NHANH THEO CÁC NHÓM LOGIC (FILE - HÀM - DÒNG CODE)
 
 | Nhóm Chức Năng | Tầng Hệ Thống | Tên File | Tên Hàm / Đoạn Code | Vị Trí Dòng Code | Nhiệm Vụ Chi Tiết |
 | :--- | :--- | :--- | :--- | :---: | :--- |
@@ -30,6 +31,15 @@
 | | | `js/supabaseClient.js` | `pushAlertLog()` | **346 - 364** | Thực hiện `INSERT` lịch sử cảnh báo vào bảng `alert_logs` PostgreSQL |
 | | | `js/app.js` | `sendResetPinCode()` | **239 - 300** | Tạo PIN 6 số, lưu Supabase (`save_reset_pin`) và gửi Email khôi phục tài khoản |
 | | | `js/app.js` | `testEmailAlert()` | **1143 - 1165** | Xử lý sự kiện nút bấm Test gửi Email cảnh báo trên giao diện Web |
+| **3. Database & Time-series** | **Supabase DB** | `supabase/schema.sql` | Table `sensor_logs` | **12 - 25** | Khởi tạo bảng PostgreSQL lưu trữ chuỗi thời gian: `temperature`, `humidity`, `soil_moisture` |
+| | | `js/supabaseClient.js` | `subscribeRealtime()` | **191 - 233** | Lắng nghe WebSocket sự kiện `INSERT` trên bảng `sensor_logs` |
+| | | `js/supabaseClient.js` | `fetchSensorHistory()` | **240 - 262** | Truy vấn mốc lịch sử thời gian (`order created_at desc`) từ Supabase |
+| | **Engine Biểu Đồ** | `js/charts.js` | `initChart()` | **13 - 127** | Khởi tạo Chart.js đa đường với 2 trục Y (`yTemp` °C và `yPercent` %) |
+| | | `js/charts.js` | `appendDataPoint()` | **132 - 156** | Thêm 1 điểm thời gian thực mượt mà (FIFO max 30-50 điểm) |
+| | | `js/charts.js` | `loadDataSet()` | **161 - 178** | Nạp toàn bộ mảng dữ liệu lịch sử từ database vào Chart.js |
+| | | `js/charts.js` | `exportToCSV()` | **197 - 223** | Trích xuất toàn bộ dữ liệu time-series ra file `CSV UTF-8 (BOM)` |
+| | **Dashboard Web** | `js/app.js` | `initQuickDashboardChart()` | **984 - 1040** | Khởi tạo biểu đồ Quick View Chart thu nhỏ tại trang Tổng quan |
+| | | `js/app.js` | `appendQuickChartPoint()` | **1042 - 1070** | Đẩy điểm dữ liệu mới vào biểu đồ Quick View của Dashboard |
 
 ---
 
@@ -512,4 +522,225 @@ sequenceDiagram
 
 ---
 
-*Tài liệu tóm lược tập trung 2 nhóm logic phục vụ thuyết trình & bảo vệ đồ án chuyên ngành Công nghệ thông tin.*
+# 📊📈 NHÓM 3: CƠ SỞ DỮ LIỆU (SUPABASE) & BIỂU ĐỒ TIME-SERIES (CHART.JS)
+
+### 3.1. Sơ Đồ Khối Toàn Diện (End-to-End Flowchart)
+
+```mermaid
+flowchart TD
+    subgraph SENSOR_TIER ["1. TẦNG CẢM BIẾN & GATEWAY (Uno + ESP8266)"]
+        DHT_SMS["🌡️ DHT11 (Nhiệt độ, Độ ẩm KK)<br>🌱 SMS-V1 (Độ ẩm đất)<br>☀️ LM393 (Quang trở LDR)"]
+        DHT_SMS -->|"Đọc chu kỳ 2s & đóng gói JSON"| UNO["Arduino Uno: sendDataToESP()<br>(do_an_cay.ino: Dòng 194-212)"]
+        UNO -->|"UART Serial 9600"| ESP["ESP8266: loop()<br>(esp_wifi.ino: Dòng 43-57)"]
+    end
+
+    subgraph CLOUD_DATABASE ["2. TẦNG CƠ SỞ DỮ LIỆU SUPABASE (PostgreSQL Cloud)"]
+        ESP -->|"HTTPS POST REST / Realtime"| SP_INSERT["Bảng PostgreSQL: sensor_logs<br>• temperature (float)<br>• humidity (float)<br>• soil_moisture (int)<br>• light_level (int)<br>• is_dark (bool)<br>• created_at (timestampz)"]
+    end
+
+    subgraph WEB_SYNC ["3. TẦNG ĐỒNG BỘ THỜI GIAN THỰC & TRUY VẤN LỊCH SỬ"]
+        SP_INSERT -->|"WebSockets: postgres_changes (INSERT)"| SP_WS["SupabaseService.subscribeRealtime()<br>(js/supabaseClient.js: Dòng 191-233)"]
+        SP_INSERT -->|"REST API Query: fetchSensorHistory()"| SP_QUERY["SupabaseService.fetchSensorHistory(limit)<br>(js/supabaseClient.js: Dòng 240-262)"]
+        
+        SP_WS -->|"Dữ liệu mới (Realtime)"| APP_DISPATCH["app.js: processIncomingSensorData(data)"]
+        SP_QUERY -->|"Mảng lịch sử (History Array)"| APP_LOAD["app.js: loadHistoryChartData()"]
+    end
+
+    subgraph CHART_ENGINE ["4. TẦNG RENDER BIỂU ĐỒ TIME-SERIES (Chart.js Engine)"]
+        APP_DISPATCH -->|"Cập nhật mượt mà (FIFO max 30-50 pts)"| CHART_APPEND["ChartService.appendDataPoint(record)<br>(js/charts.js: Dòng 132-156)"]
+        APP_LOAD -->|"Nạp tập dữ liệu lịch sử"| CHART_SET["ChartService.loadDataSet(dataList)<br>(js/charts.js: Dòng 161-178)"]
+        
+        CHART_APPEND --> DUAL_AXES["Biểu đồ Đa Đường Trục Kép (Dual Y-Axes)<br>• Trục trái (yTemp): Nhiệt độ 15°C - 45°C (#f59e0b)<br>• Trục phải (yPercent): Độ ẩm KK & Đất 0% - 100%"]
+        CHART_SET --> DUAL_AXES
+        
+        DUAL_AXES --> DOM_CANVAS["📍 Canvas #historyChart (Tab Analytics: Dòng 578)"]
+        APP_DISPATCH --> DOM_QUICK["📍 Canvas #quickViewChart (Tab Dashboard: Dòng 395)"]
+    end
+
+    subgraph REPORT_EXPORT ["5. TẦNG XUẤT BÁO CÁO (CSV EXPORT)"]
+        DUAL_AXES -->|"Bấm nút #btn-export-csv"| CSV_GEN["ChartService.exportToCSV()<br>(js/charts.js: Dòng 197-223)<br>Tạo Blob UTF-8 kèm BOM (\uFEFF)"]
+        CSV_GEN --> CSV_FILE["📁 File: biosync_sensor_logs_YYYY-MM-DD.csv<br>(Mở trực tiếp trên Microsoft Excel tiếng Việt không lỗi font)"]
+    end
+```
+
+---
+
+### 3.2. Sơ Đồ Tuần Tự Đồng Bộ Dữ Liệu & Render Time-series (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant ESP as ESP8266 Gateway
+    participant SupaDB as Supabase Database (PostgreSQL)
+    participant SupaClient as supabaseClient.js
+    participant App as app.js
+    participant ChartJS as charts.js (Chart.js Engine)
+    participant DOM_Canvas as Canvas HTML5 (#historyChart)
+    participant User as Người Dùng
+
+    Note over User, DOM_Canvas: 1. Khởi tạo & Tải dữ liệu lịch sử ban đầu (Cold Start)
+    App->>ChartJS: ChartService.init() -> Khởi tạo Chart(ctx, config) với Dual Y-Axes
+    App->>SupaClient: SupabaseService.fetchSensorHistory(30)
+    SupaClient->>SupaDB: SELECT * FROM sensor_logs ORDER BY created_at DESC LIMIT 30
+    SupaDB-->>SupaClient: Trả về mảng 30 bản ghi JSON
+    SupaClient->>SupaClient: Đảo chiều mảng (reverse) theo thứ tự thời gian tăng dần
+    SupaClient-->>App: dataList[]
+    App->>ChartJS: ChartService.loadDataSet(dataList)
+    ChartJS->>DOM_Canvas: mainChart.update() -> Vẽ 3 đường biểu đồ lịch sử
+
+    Note over ESP, DOM_Canvas: 2. Đồng bộ thời gian thực qua WebSockets (Realtime Stream)
+    ESP->>SupaDB: INSERT INTO sensor_logs (temp, hum, soil, light) VALUES (28.5, 70, 65, 80)
+    SupaDB-->>SupaClient: WebSocket Event 'INSERT' -> payload.new
+    SupaClient->>App: Callback onSensorData(newRecord)
+    App->>ChartJS: ChartService.appendDataPoint(newRecord)
+    ChartJS->>ChartJS: Push nhãn thời gian HH:mm:ss & data (FIFO: shift nếu > 30 pts)
+    ChartJS->>DOM_Canvas: mainChart.update('none') -> Cập nhật mượt, không giật lag
+
+    Note over User, ChartJS: 3. Xuất file báo cáo lịch sử CSV UTF-8
+    User->>App: Bấm nút "Xuất File CSV" (#btn-export-csv)
+    App->>ChartJS: ChartService.exportToCSV()
+    ChartJS->>ChartJS: Ghép chuỗi UTF-8 BOM (\uFEFF) & tạo Blob URL
+    ChartJS-->>User: Trình duyệt tự động tải file `biosync_sensor_logs_2026-08-19.csv`
+```
+
+---
+
+### 3.3. Cấu Trúc Bảng Dữ Liệu `sensor_logs` (Supabase PostgreSQL)
+
+| Tên Cột (Column) | Kiểu Dữ Liệu | Ràng Buộc | Ý Nghĩa / Nguồn Cung Cấp |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGSERIAL` | `PRIMARY KEY` | Khóa chính tự tăng của mỗi bản ghi đo |
+| `created_at` | `TIMESTAMPTZ` | `DEFAULT now()` | Mốc thời gian ISO 8601 (Dùng cho trục hoành Time-series) |
+| `temperature` | `NUMERIC(4,1)`| `NOT NULL` | Nhiệt độ môi trường (°C) từ cảm biến DHT11 |
+| `humidity` | `NUMERIC(4,1)`| `NOT NULL` | Độ ẩm không khí (%RH) từ cảm biến DHT11 |
+| `soil_moisture`| `INTEGER` | `DEFAULT 0` | Độ ẩm đất (%) từ cảm biến điện dung SMS-V1 |
+| `light_level` | `INTEGER` | `DEFAULT 0` | Cường độ sáng (%) từ quang trở LDR / LM393 |
+| `is_dark` | `BOOLEAN` | `DEFAULT false` | Cờ trạng thái môi trường tối/sáng |
+
+---
+
+### 3.4. Kiến Trúc Hệ Trục Kép Dual Y-Axes & Chiến Lược Cập Nhật Biểu Đồ
+
+1. **Hệ 2 trục tung độc lập (Dual Y-Axes):**
+   * **Trục trái (`yTemp`):** Chuyên dụng cho **Nhiệt độ (°C)**, dải đo đề xuất `15°C - 45°C`, nét vẽ màu vàng/hổ phách (`#f59e0b`), vùng phủ gradient `rgba(245, 158, 11, 0.12)`.
+   * **Trục phải (`yPercent`):** Chuyên dụng cho **Độ ẩm không khí (%)** (nét vẽ màu Cyan `#06b6d4`) và **Độ ẩm đất (%)** (nét đứt Emerald `#10b981`), dải đo cố định `0% - 100%`.
+2. **Cơ chế cập nhật không giật lag (`mainChart.update('none')`):**
+   * Tắt animation chuyển cảnh nặng khi nhận điểm realtime mỗi 2 giây, giúp giao diện 60 FPS mượt mà.
+   * Áp dụng hàng đợi **FIFO (First In First Out)** giới hạn 30 điểm hiển thị trên màn hình nhằm tránh tràn bộ nhớ RAM trình duyệt.
+
+---
+
+### 3.5. Vị Trí Cụ Thể Trên Giao Diện Frontend ([index.html](file:///d:/web_vlcntt/index.html))
+
+| Tên Phần Tử Giao Diện | File Nguồn | ID Phần Tử DOM | Vị Trí Dòng Code | Chức Năng Chi Tiết |
+| :--- | :--- | :--- | :---: | :--- |
+| **Canvas Biểu Đồ Time-series Lớn** | `index.html` | `#historyChart` | **Dòng 578** | Vùng vẽ Canvas đồ thị đa đường Chart.js toàn diện |
+| **Canvas Biểu Đồ Dashboard Thu Nhỏ**| `index.html` | `#quickViewChart`| **Dòng 395** | Vùng vẽ Canvas biểu đồ nhanh tại trang Tổng quan |
+| **Nút Xuất Dữ Liệu CSV** | `index.html` | `#btn-export-csv` | **Dòng 569** | Nút bấm trích xuất toàn bộ dữ liệu time-series ra file CSV |
+| **Tab Chứa Biểu Đồ Phân Tích** | `index.html` | `#tab-analytics` | **Dòng 524** | Tab Phân tích dữ liệu & Đồ thị trên thanh điều hướng |
+| **Nút Chọn Khung Thời Gian 1H** | `index.html` | `#btn-filter-1h` | **Dòng 562** | Bộ lọc hiển thị dữ liệu lịch sử trong 1 giờ gần nhất |
+| **Nút Chọn Khung Thời Gian 24H**| `index.html` | `#btn-filter-24h`| **Dòng 564** | Bộ lọc hiển thị dữ liệu lịch sử trong 24 giờ gần nhất |
+
+---
+
+### 3.6. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 3)
+
+#### 1. Tầng Cơ Sở Dữ Liệu Supabase ([js/supabaseClient.js](file:///d:/web_vlcntt/js/supabaseClient.js))
+* **Lắng nghe WebSockets Realtime (`subscribeRealtime()`, Dòng 191 – 233):**
+  ```javascript
+  // Dòng 201-209 trong js/supabaseClient.js
+  realtimeChannel = supabaseClient
+      .channel('public:smart_terrarium_realtime')
+      // Lắng nghe bản ghi cảm biến mới chèn từ ESP8266
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_logs' }, payload => {
+          console.log("⚡ [Realtime Supabase] Dữ liệu cảm biến mới từ ESP8266:", payload.new);
+          if (callbacks.onSensorData) {
+              callbacks.onSensorData(payload.new);
+          }
+      })
+      .subscribe();
+  ```
+
+* **Truy vấn lịch sử chuỗi thời gian (`fetchSensorHistory()`, Dòng 240 – 262):**
+  ```javascript
+  // Dòng 245-257 trong js/supabaseClient.js
+  const { data, error } = await supabaseClient
+      .from('sensor_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+  if (error) return null;
+  // Đảo lại thứ tự thời gian tăng dần để vẽ biểu đồ từ trái sang phải
+  return (data || []).reverse();
+  ```
+
+#### 2. Tầng Engine Biểu Đồ Chart.js ([js/charts.js](file:///d:/web_vlcntt/js/charts.js))
+* **Khởi tạo đồ thị đa đường với hệ 2 trục Y (`initChart()`, Dòng 13 – 127):**
+  ```javascript
+  // Dòng 22-64 & 99-119 trong js/charts.js
+  mainChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+          labels: [],
+          datasets: [
+              { label: 'Nhiệt độ (°C)', data: [], borderColor: '#f59e0b', yAxisID: 'yTemp' },
+              { label: 'Độ ẩm không khí (%)', data: [], borderColor: '#06b6d4', yAxisID: 'yPercent' },
+              { label: 'Độ ẩm đất (%)', data: [], borderColor: '#10b981', borderDash: [4, 4], yAxisID: 'yPercent' }
+          ]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+              yTemp: { type: 'linear', position: 'left', suggestedMin: 15, suggestedMax: 45 },
+              yPercent: { type: 'linear', position: 'right', min: 0, max: 100 }
+          }
+      }
+  });
+  ```
+
+* **Thêm điểm thời gian thực mượt mà (`appendDataPoint()`, Dòng 132 – 156):**
+  ```javascript
+  // Dòng 132-156 trong js/charts.js
+  function appendDataPoint(record) {
+      if (!mainChart) return;
+      const timeLabel = new Date(record.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      mainChart.data.labels.push(timeLabel);
+      mainChart.data.datasets[0].data.push(record.temperature);
+      mainChart.data.datasets[1].data.push(record.humidity);
+      mainChart.data.datasets[2].data.push(record.soil_moisture);
+
+      // FIFO: Giới hạn 30 điểm gần nhất
+      if (mainChart.data.labels.length > 30) {
+          mainChart.data.labels.shift();
+          mainChart.data.datasets.forEach(ds => ds.data.shift());
+      }
+      mainChart.update('none'); // Cập nhật không giật lag
+  }
+  ```
+
+* **Xuất tập dữ liệu ra file CSV chuẩn UTF-8 BOM (`exportToCSV()`, Dòng 197 – 223):**
+  ```javascript
+  // Dòng 203-219 trong js/charts.js
+  // Sử dụng ký tự \uFEFF (UTF-8 Byte Order Mark) để Excel mở tiếng Việt chuẩn 100%
+  let csvContent = "\uFEFFThoiGian,NhietDo_C,DoAmKhongKhi_%,DoAmDat_%,AnhSang_Lux,TroiToi\n";
+  chartHistoryData.forEach(r => {
+      const time = new Date(r.created_at || Date.now()).toLocaleString('vi-VN');
+      csvContent += `"${time}",${r.temperature},${r.humidity},${r.soil_moisture},${r.light_level || 0},${r.is_dark ? 'CO' : 'KHONG'}\n`;
+  });
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `biosync_sensor_logs_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  ```
+
+---
+
+*Tài liệu tóm lược tập trung 3 nhóm logic phục vụ thuyết trình & bảo vệ đồ án chuyên ngành Công nghệ thông tin.*
+

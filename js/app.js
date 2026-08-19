@@ -15,7 +15,7 @@
         lampStatus: false,
         soilThreshold: 35.0,
         tempMaxThreshold: 38.0,
-        
+
         currentSensorData: {
             temperature: null,
             humidity: null,
@@ -23,7 +23,7 @@
             light_level: null,
             is_dark: false
         },
-        
+
         alerts: []
     };
 
@@ -106,7 +106,7 @@
      */
     async function checkAuthSession() {
         const savedSession = localStorage.getItem("biosync_local_session");
-        
+
         if (window.SupabaseService && window.SupabaseService.isConnected()) {
             const session = await window.SupabaseService.getCurrentSession();
             if (session && session.user) {
@@ -127,7 +127,7 @@
     function setLoggedInUser(userObj) {
         AppState.isLoggedIn = true;
         AppState.currentUser = userObj;
-        
+
         const email = userObj.email || "admin@biosync.iot";
         const name = userObj.user_metadata?.full_name || "Võ Thúc Trí";
 
@@ -604,7 +604,7 @@
     };
 
     /**
-     * BẬT / TẮT ĐÈN LED L1 THỦ CÔNG (ĐỒNG BỘ 100% NHƯ test_mqtt.html)
+     * BẬT / TẮT ĐÈN LED L1 THỦ CÔNG
      */
     window.toggleLamp = function (status) {
         if (status === undefined) status = !AppState.lampStatus;
@@ -946,15 +946,13 @@
         }
 
         const html = AppState.alerts.map(a => `
-            <div class="flex items-start gap-3 p-3 rounded-xl border text-xs ${
-                a.severity === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300' :
+            <div class="flex items-start gap-3 p-3 rounded-xl border text-xs ${a.severity === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300' :
                 a.severity === 'WARNING' ? 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300' :
-                'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300'
+                    'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300'
             }">
-                <span class="material-symbols-outlined text-base mt-0.5">${
-                    a.severity === 'CRITICAL' ? 'error' :
-                    a.severity === 'WARNING' ? 'warning' : 'info'
-                }</span>
+                <span class="material-symbols-outlined text-base mt-0.5">${a.severity === 'CRITICAL' ? 'error' :
+                a.severity === 'WARNING' ? 'warning' : 'info'
+            }</span>
                 <div class="flex-1">
                     <div class="font-bold mb-0.5">${a.message}</div>
                     <div class="text-[10px] opacity-70">${a.time} • Loại: ${a.type}</div>
@@ -1025,8 +1023,8 @@
                 plugins: { legend: { labels: { color: '#9ca3af', font: { size: 11 } } } },
                 scales: {
                     x: { ticks: { color: '#9ca3af', font: { size: 10 } }, grid: { display: false } },
-                    y: { 
-                        ticks: { color: '#9ca3af', font: { size: 10 } }, 
+                    y: {
+                        ticks: { color: '#9ca3af', font: { size: 10 } },
                         grid: { color: 'rgba(255,255,255,0.05)' },
                         suggestedMin: 10,
                         suggestedMax: 100
@@ -1199,7 +1197,7 @@
         simulatorInterval = setInterval(() => {
             temp += (Math.random() - 0.48) * 0.3;
             hum += (Math.random() - 0.5) * 0.6;
-            
+
             // Nếu Bơm đang bật -> độ ẩm đất tăng nhanh
             if (AppState.pumpStatus) {
                 soil += 3.0;
@@ -1283,7 +1281,7 @@
             const tag = document.getElementById("control-mode-tag");
             if (tag) {
                 tag.textContent = controls.system_mode === 'auto' ? "Auto Mode ⚡" : "Manual Mode ✋";
-                tag.className = controls.system_mode === 'auto' 
+                tag.className = controls.system_mode === 'auto'
                     ? "text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold cursor-pointer hover:opacity-80 transition-opacity"
                     : "text-[11px] px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-semibold cursor-pointer hover:opacity-80 transition-opacity";
             }

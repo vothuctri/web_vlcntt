@@ -713,75 +713,9 @@ sequenceDiagram
 
 ---
 
-# 📊📈 NHÓM 4: CƠ SỞ DỮ LIỆU (SUPABASE) & BIỂU ĐỒ TIME-SERIES (CHART.JS)ng báo từ hệ thống Terrarium",
-      s: options.sound !== undefined ? options.sound : "1",      // Chuông
-      v: options.vibrate !== undefined ? options.vibrate : "3",  // Rung mạnh
-      i: options.icon !== undefined ? options.icon : "82",       // Icon cảm biến
-      pr: options.priority !== undefined ? options.priority : "2" // Độ ưu tiên cao nhất
-  });
+# 📊📈 NHÓM 4: CƠ SỞ DỮ LIỆU (SUPABASE) & BIỂU ĐỒ TIME-SERIES (CHART.JS)
 
-  const response = await fetch("https://www.pushsafer.com/api", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: params.toString()
-  });
-  ```
-
-* **Tự động kích hoạt khi DHT11 quá nhiệt (`checkAndTriggerAlerts()`, Dòng 158 – 178 trong `js/notificationService.js`):**
-  ```javascript
-  // Dòng 163-169 trong js/notificationService.js
-  if (temp > thresholds.TEMP_MAX) {
-      const title = "🔥 CẢNH BÁO: QUÁ NHIỆT TERRARIUM!";
-      const msg = `Nhiệt độ hiện tại đạt ${temp.toFixed(1)}°C (vượt ngưỡng cho phép ${thresholds.TEMP_MAX}°C)...`;
-      
-      await sendPushsaferNotification(title, msg, { icon: 82, priority: 2 });
-      await sendEmailNotification(title, msg);
-  }
-  ```
-
-* **Thông báo Bật/Tắt thiết bị Bơm & Đèn (`sendDeviceNotification()`, Dòng 132 – 153 trong `js/notificationService.js`):**
-  Bắn Pushsafer thông báo khi máy bơm hoặc đèn bật/tắt (manual hoặc auto).
-
----
-
-#### 2. Dịch Vụ Gửi Email & Đồng Bộ Supabase Database
-* **Gửi Email bảng HTML (`sendEmailNotification()`, Dòng 76 – 124 trong `js/notificationService.js`):**
-  ```javascript
-  // Dòng 90-104 trong js/notificationService.js
-  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(targetEmail)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({
-          _subject: `🌱 [Smart Terrarium Nhóm 05] ${subject || 'CẢNH BÁO HỆ THỐNG'}`,
-          "Tiêu Đề Cảnh Báo": subject,
-          "Nội Dung Chi Tiết": body,
-          "Hệ Thống Giám Sát": "BioSync Smart Terrarium - Lớp 24C03 (Nhóm 05)",
-          "Thời Gian Ghi Nhận": new Date().toLocaleString("vi-VN"),
-          _template: "table"
-      })
-  });
-  ```
-
-* **Ghi nhật ký vào bảng `alert_logs` Supabase (`pushAlertLog()`, Dòng 346 – 364 trong `js/supabaseClient.js`):**
-  ```javascript
-  // Dòng 351-358 trong js/supabaseClient.js
-  const { error } = await supabaseClient
-      .from('alert_logs')
-      .insert([{
-          alert_type: alertObj.alert_type || "EMAIL_NOTIFICATION",
-          severity: alertObj.severity || "WARNING",
-          message: alertObj.message || ""
-      }]);
-  ```
-
-* **Email Mã PIN Khôi Phục Tài Khoản (`sendResetPinCode()`, Dòng 239 – 300 trong `js/app.js`):**
-  Sinh mã PIN 6 số ngẫu nhiên, lưu vào Supabase và gửi qua Email FormSubmit để xác thực quên mật khẩu.
-
----
-
-# 📊📈 NHÓM 3: CƠ SỞ DỮ LIỆU (SUPABASE) & BIỂU ĐỒ TIME-SERIES (CHART.JS)
-
-### 3.1. Sơ Đồ Khối Toàn Diện (End-to-End Flowchart)
+### 4.1. Sơ Đồ Khối Toàn Diện (End-to-End Flowchart)
 
 ```mermaid
 flowchart TD
@@ -822,7 +756,7 @@ flowchart TD
 
 ---
 
-### 3.2. Sơ Đồ Tuần Tự Đồng Bộ Dữ Liệu & Render Time-series (Sequence Diagram)
+### 4.2. Sơ Đồ Tuần Tự Đồng Bộ Dữ Liệu & Render Time-series (Sequence Diagram)
 
 ```mermaid
 sequenceDiagram
@@ -862,7 +796,7 @@ sequenceDiagram
 
 ---
 
-### 3.3. Cấu Trúc Bảng Dữ Liệu `sensor_logs` (Supabase PostgreSQL)
+### 4.3. Cấu Trúc Bảng Dữ Liệu `sensor_logs` (Supabase PostgreSQL)
 
 | Tên Cột (Column) | Kiểu Dữ Liệu | Ràng Buộc | Ý Nghĩa / Nguồn Cung Cấp |
 | :--- | :--- | :--- | :--- |
@@ -876,7 +810,7 @@ sequenceDiagram
 
 ---
 
-### 3.4. Kiến Trúc Hệ Trục Kép Dual Y-Axes & Chiến Lược Cập Nhật Biểu Đồ
+### 4.4. Kiến Trúc Hệ Trục Kép Dual Y-Axes & Chiến Lược Cập Nhật Biểu Đồ
 
 1. **Hệ 2 trục tung độc lập (Dual Y-Axes):**
    * **Trục trái (`yTemp`):** Chuyên dụng cho **Nhiệt độ (°C)**, dải đo đề xuất `15°C - 45°C`, nét vẽ màu vàng/hổ phách (`#f59e0b`), vùng phủ gradient `rgba(245, 158, 11, 0.12)`.
@@ -887,7 +821,7 @@ sequenceDiagram
 
 ---
 
-### 3.5. Vị Trí Cụ Thể Trên Giao Diện Frontend ([index.html](file:///d:/web_vlcntt/index.html))
+### 4.5. Vị Trí Cụ Thể Trên Giao Diện Frontend ([index.html](file:///d:/web_vlcntt/index.html))
 
 | Tên Phần Tử Giao Diện | File Nguồn | ID Phần Tử DOM | Vị Trí Dòng Code | Chức Năng Chi Tiết |
 | :--- | :--- | :--- | :---: | :--- |
@@ -900,7 +834,7 @@ sequenceDiagram
 
 ---
 
-### 3.6. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 3)
+### 4.6. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 4)
 
 #### 1. Tầng Cơ Sở Dữ Liệu Supabase ([js/supabaseClient.js](file:///d:/web_vlcntt/js/supabaseClient.js))
 * **Hàm Ghi Dữ Liệu Cảm Biến Vào Database (`pushSensorData()`, Dòng 327 – 344):**
@@ -1071,9 +1005,9 @@ sequenceDiagram
 
 ---
 
-# 🔐🔑 NHÓM 4: BẢO MẬT HỆ THỐNG & XÁC THỰC TÀI KHOẢN (SUPABASE AUTH & OTP PIN)
+# 🔐🔑 NHÓM 5: BẢO MẬT HỆ THỐNG & XÁC THỰC TÀI KHOẢN (SUPABASE AUTH & OTP PIN)
 
-### 4.1. Sơ Đồ Khối Toàn Diện: Đăng Nhập & Quên Mật Khẩu (End-to-End Flowchart)
+### 5.1. Sơ Đồ Khối Toàn Diện: Đăng Nhập & Quên Mật Khẩu (End-to-End Flowchart)
 
 ```mermaid
 flowchart TD
@@ -1125,7 +1059,7 @@ flowchart TD
 
 ---
 
-### 4.2. Sơ Đồ Tuần Tự Quên Mật Khẩu & Xác Thực Mã OTP PIN (Sequence Diagram)
+### 5.2. Sơ Đồ Tuần Tự Quên Mật Khẩu & Xác Thực Mã OTP PIN (Sequence Diagram)
 
 ```mermaid
 sequenceDiagram
@@ -1168,7 +1102,7 @@ sequenceDiagram
 
 ---
 
-### 4.3. Bảng Đối Soát Thành Phần Giao Diện Đăng Nhập & Bảo Mật ([index.html](file:///d:/web_vlcntt/index.html))
+### 5.3. Bảng Đối Soát Thành Phần Giao Diện Đăng Nhập & Bảo Mật ([index.html](file:///d:/web_vlcntt/index.html))
 
 | Khối Giao Diện | ID Phần Tử DOM | Vị Trí Dòng Code | Chức Năng Chi Tiết |
 | :--- | :--- | :---: | :--- |
@@ -1188,7 +1122,7 @@ sequenceDiagram
 
 ---
 
-### 4.4. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 4)
+### 5.4. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 5)
 
 #### 1. Xử lý Đăng nhập & Duy trì phiên ([js/app.js](file:///d:/web_vlcntt/js/app.js))
 * **Kiểm tra phiên đăng nhập tự động (`checkAuthSession()`, Dòng 107 – 125):**
@@ -1272,6 +1206,6 @@ sequenceDiagram
 
 ---
 
-*Tài liệu tóm lược tập trung 4 nhóm logic phục vụ thuyết trình & bảo vệ đồ án chuyên ngành Công nghệ thông tin.*
+*Tài liệu tóm lược tập trung 5 nhóm logic phục vụ thuyết trình & bảo vệ đồ án chuyên ngành Công nghệ thông tin.*
 
 

@@ -12,12 +12,15 @@
 | :--- | :--- | :--- | :--- | :---: | :--- |
 | **1. DHT11 & LCD 16x2** | **Hardware Uno** | `do_an_cay/do_an_cay.ino` | `setup()` | **87 - 102** | Khởi tạo `dht.begin()`, `lcd.init()`, nạp ký tự `°C` và hiển thị Splash Screen |
 | | | `do_an_cay/do_an_cay.ino` | `readSensors()` | **171 - 179** | Đọc nhiệt độ (°C) & độ ẩm (%RH) từ chân A2 qua thư viện `DHT.h` |
-| | | `do_an_cay/do_an_cay.ino` | `updateLCD()` | **259 - 276** | Định dạng và xuất số liệu nhiệt độ `T:..C H:..%` lên LCD 16x2 phần cứng |
-| | | `do_an_cay/do_an_cay.ino` | `sendDataToESP()` | **194 - 212** | Đóng gói trường `"temp"` và `"hum"` vào chuỗi JSON gửi qua Serial |
-| | **Gateway ESP8266**| `esp_wifi/esp_wifi.ino` | `loop()` | **43 - 57** | Đọc chuỗi JSON từ Arduino Uno qua Serial và Publish lên Topic `topic_sensors` |
-| | **Web Dashboard** | `js/app.js` | `processIncomingSensorData()` | **832 - 895** | Tiếp nhận gói tin JSON từ MQTT Broker, điều phối cập nhật UI và LCD Simulator |
+| | | `do_an_cay/do_an_cay.ino` | `updateLCD()` | **259 - 290** | Luân chuyển 2 trang LCD: Trang 1 (Môi trường `T:..C`), Trang 2 (Chế độ `Che do: TU DONG/THU CONG`) |
+| | | `do_an_cay/do_an_cay.ino` | `parseCommand()` | **230 - 256** | Giải mã lệnh `MODE:AUTO` / `MODE:MANUAL` từ Web để đổi biến `isAutoMode` |
+| | | `do_an_cay/do_an_cay.ino` | `sendDataToESP()` | **194 - 212** | Đóng gói JSON kèm trường `"auto": 1/0` gửi qua UART Serial |
+| | **Gateway ESP8266**| `esp_wifi/esp_wifi.ino` | `loop()`, `mqttCallback()`| **43 - 57, 73 - 85** | Đẩy JSON lên Topic Sensors & Nhận `MODE:AUTO/MANUAL` từ Web bắn xuống Uno qua Serial |
+| | **Web Dashboard** | `js/app.js` | `setSystemMode()` | **672 - 697** | Xử lý thao tác bấm nút chế độ của user, đổi UI và gửi lệnh MQTT `MODE:AUTO/MANUAL` |
+| | | `js/app.js` | `processIncomingSensorData()` | **832 - 895** | Tiếp nhận gói tin JSON từ MQTT Broker, điều phối cập nhật UI và LCD Simulator |
 | | | `js/app.js` | `updateMetricCards()` | **897 - 912** | Cập nhật số liệu nhiệt độ (°C) và độ ẩm (%) lên thẻ đo đạc Dashboard |
-| | **Mô phỏng LCD** | `js/lcdSimulator.js` | `updateFromSensors()` | **48 - 62** | Định dạng chuỗi `Temp:xx.xC H:xx%` cho dòng 1 màn hình mô phỏng |
+| | **Mô phỏng LCD** | `js/lcdSimulator.js` | `updateFromSensors()` | **48 - 68** | Định dạng chuỗi `Temp:xx.xC H:xx%` (Dòng 1) và `Soil:xx% [AUTO/MANUAL]` (Dòng 2) |
+| | | `js/lcdSimulator.js` | `updateDeviceStatus()` | **70 - 85** | Mô phỏng Trang 2 LCD hiển thị Bơm, Đèn và `Che do: TU DONG / THU CONG` |
 | | | `js/lcdSimulator.js` | `pad16()`, `updateDisplay()` | **15 - 42** | Cắt/đệm chuẩn 16 ký tự và ghi vào DOM HTML `#lcd-line-1`, `#lcd-line-2` |
 | **2. Email & Pushsafer**| **Pushsafer (Phone)**| `js/notificationService.js`| `sendPushsaferNotification()`| **16 - 68** | Tạo URLSearchParams và gửi HTTP POST tới `https://www.pushsafer.com/api` |
 | | | `js/notificationService.js`| `checkAndTriggerAlerts()` | **158 - 178** | Tự động bắn Pushsafer khẩn cấp (icon 82, priority 2) khi DHT11 quá nhiệt (>38°C) |
@@ -133,13 +136,95 @@ Trang 1 (Thiết Bị & Chế Độ):
 
 #### B. Màn hình LCD 16x2 Mô Phỏng Web (`lcdSimulator.js` $\rightarrow$ `#tab-analytics`)
 ```text
+Trang Cảm Biến:
 [Dòng 1 - #lcd-line-1] | T | e | m | p | : | 2 | 8 | . | 5 | C |   | H | : | 7 | 0 | % | (16 ký tự)
-[Dòng 2 - #lcd-line-2] | S | o | i | l | : | 6 | 5 | % |   | L | g | t | : | D | A | R | K | (16 ký tự)
+[Dòng 2 - #lcd-line-2] | S | o | i | l | : | 6 | 5 | % |   | [ | A | U | T | O | ] |   | (16 ký tự)
+
+Trang Thiết Bị & Chế Độ (updateDeviceStatus):
+[Dòng 1 - #lcd-line-1] | B | : | O | F | F |   |   | L | E | D | : | O | N |   |   |   | (16 ký tự)
+[Dòng 2 - #lcd-line-2] | C | h | e |   | d | o | : |   | T | H | U |   | C | O | N | G | (16 ký tự)
 ```
 
 ---
 
-### 1.4. Vị Trí Cụ Thể Trên Giao Diện Frontend ([index.html](file:///d:/web_vlcntt/index.html))
+### 1.4. Luồng Xuất Chế Độ Chủ Động / Bị Động Từ Thao Tác Người Dùng Lên LCD 16x2
+
+```mermaid
+flowchart TD
+    subgraph USER_ACTION ["1. THAO TÁC NGƯỜI DÙNG TRÊN FRONTEND (index.html & app.js)"]
+        ACT_BTN["Cách 1: Nhấn nút chọn Chế độ<br>• #mode-auto-btn (Tự Động / Chủ Động)<br>• #mode-manual-btn (Thủ Công / Bị Động)<br>• #control-mode-tag (Thẻ badge)"]
+        ACT_DEV["Cách 2: Điều khiển thiết bị thủ công<br>• Bấm BẬT/TẮT Bơm M1 (#btn-pump-on/off)<br>• Bấm BẬT/TẮT Đèn L1 (#btn-lamp-on/off)<br>(Hệ thống tự chuyển sang Manual)"]
+        
+        ACT_BTN -->|"Gọi hàm"| JS_MODE["setSystemMode(mode)<br>(app.js: Dòng 672-697)"]
+        ACT_DEV -->|"Gọi hàm"| JS_MODE
+    end
+
+    subgraph MQTT_TRANSMISSION ["2. TRUYỀN THÔNG LỆNH QUA MQTT & ESP8266"]
+        JS_MODE -->|"MQTTService.sendCommand()"| MQTT_PUB["Publish gói tin điều khiển<br>Topic: smart_terrarium/nhom05/control<br>Payload: 'MODE:AUTO' hoặc 'MODE:MANUAL'"]
+        MQTT_PUB -->|"TCP/IP Wi-Fi"| ESP_CB["ESP8266: mqttCallback()<br>(esp_wifi.ino: Dòng 73-85)"]
+        ESP_CB -->|"UART Serial Tx/Rx 9600"| UNO_UART["Gửi UART xuống Uno:<br>Serial.println('MODE:AUTO') hoặc<br>Serial.println('MODE:MANUAL')"]
+    end
+
+    subgraph UNO_PROCESSING ["3. XỬ LÝ TRÊN ARDUINO UNO (do_an_cay.ino)"]
+        UNO_UART --> UNO_READ["readSerialCommands()<br>(Dòng 215-227)"]
+        UNO_READ --> UNO_PARSE["parseCommand(cmd)<br>(Dòng 230-256)<br>Cập nhật: isAutoMode = true / false"]
+        
+        UNO_PARSE --> CHECK_MODE{"isAutoMode == true ?"}
+        CHECK_MODE -- "CHỦ ĐỘNG (Auto)" --> MODE_ACTIVE["isAutoMode = true<br>• Tự bật Bơm khi Đất < 40%<br>• Tự bật Đèn khi Tối < 30%"]
+        CHECK_MODE -- "BỊ ĐỘNG (Manual)" --> MODE_PASSIVE["isAutoMode = false<br>• Khóa logic tự động<br>• Chấp hành theo lệnh Web"]
+    end
+
+    subgraph LCD_OUTPUT ["4. XUẤT HIỂN THỊ LÊN MÀN HÌNH LCD 16X2"]
+        MODE_ACTIVE -->|"updateLCD(1)"| LCD_HW_AUTO["📟 LCD 16x2 Phần Cứng (Dòng 2):<br>Che do: TU DONG "]
+        MODE_PASSIVE -->|"updateLCD(1)"| LCD_HW_MAN["📟 LCD 16x2 Phần Cứng (Dòng 2):<br>Che do: THU CONG"]
+
+        JS_MODE -->|"Cập nhật mô phỏng Web"| LCD_WEB_SIM["🖥️ LCD 16x2 Web (#lcd-line-2):<br>Soil:xx% [AUTO] hoặc [MANUAL]"]
+    end
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as Người Dùng (Frontend UI)
+    participant App as app.js
+    participant MQTT as MQTT Broker (EMQX)
+    participant ESP as ESP8266 (esp_wifi.ino)
+    participant Uno as Arduino Uno (do_an_cay.ino)
+    participant LCD_HW as LCD 16x2 Phần Cứng (I2C)
+    participant LCD_Web as LCD 16x2 Mô Phỏng (DOM)
+
+    User->>App: Nhấn nút chọn Chế Độ Thủ Công (#mode-manual-btn)
+    App->>App: setSystemMode('manual') (Dòng 672)
+    App->>LCD_Web: updateFromSensors(..., isAutoMode=false) -> Dòng 2: "Soil:65% [MANUAL]"
+    
+    App->>MQTT: MQTTService.sendCommand("MODE:MANUAL") (Dòng 693)
+    MQTT->>ESP: mqttCallback() nhận payload: "MODE:MANUAL"
+    ESP->>Uno: Serial.println("MODE:MANUAL") (Dòng 83)
+
+    Uno->>Uno: readSerialCommands() -> parseCommand("MODE:MANUAL")
+    Uno->>Uno: isAutoMode = false (Khóa tự động) (Dòng 254)
+
+    Note over Uno, LCD_HW: Chu kỳ luân chuyển trang LCD (Trang 1: Thiết bị & Chế độ)
+    Uno->>LCD_HW: updateLCD(1) -> Ghi I2C Hàng 1: "Che do: THU CONG" (Dòng 288)
+    Note over LCD_HW: Màn hình LCD phần cứng hiển thị tức thì chế độ THỦ CÔNG
+```
+
+---
+
+### 1.5. Bảng Đối Soát Hành Động Người Dùng $\rightarrow$ Dữ Liệu LCD 16x2
+
+| Thao Tác Của Người Dùng | Hàm JS Kích Hoạt | Lệnh Gửi MQTT / Serial | Trạng Thái `isAutoMode` | Hiển Thị LCD Phần Cứng (Trang 1 Dòng 1) | Hiển Thị LCD Mô Phỏng Web (Dòng 2) |
+| :--- | :--- | :--- | :---: | :--- | :--- |
+| **Bấm nút [Tự Động]** | `setSystemMode('auto')` | `"MODE:AUTO"` | `true` (Chủ động) | `Che do: TU DONG ` | `Soil:xx% [AUTO]  ` |
+| **Bấm nút [Thủ Công]** | `setSystemMode('manual')`| `"MODE:MANUAL"` | `false` (Bị động) | `Che do: THU CONG` | `Soil:xx% [MANUAL]` |
+| **Bấm BẬT Máy Bơm M1** | `turnOnPump()` | `"PUMP:1"` | `false` (Bị động) | `B:ON   Che do: THU CONG` | `Soil:xx% [MANUAL]` |
+| **Bấm TẮT Máy Bơm M1** | `turnOffPump()` | `"PUMP:0"` | `false` (Bị động) | `B:OFF  Che do: THU CONG` | `Soil:xx% [MANUAL]` |
+| **Bấm BẬT Đèn LED L1** | `turnOnLamp()` | `"LED:1"` | `false` (Bị động) | `LED:ON Che do: THU CONG` | `Soil:xx% [MANUAL]` |
+| **Bấm TẮT Đèn LED L1** | `turnOffLamp()` | `"LED:0"` | `false` (Bị động) | `LED:OFF Che do: THU CONG`| `Soil:xx% [MANUAL]` |
+
+---
+
+### 1.6. Vị Trí Cụ Thể Trên Giao Diện Frontend ([index.html](file:///d:/web_vlcntt/index.html))
 
 | Tên Khối Giao Diện | File Nguồn | ID Phần Tử DOM | Vị Trí Dòng Code | Chức Năng Hiển Thị |
 | :--- | :--- | :--- | :---: | :--- |
@@ -154,7 +239,7 @@ Trang 1 (Thiết Bị & Chế Độ):
 
 ---
 
-### 1.5. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 1)
+### 1.7. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 1)
 
 #### 1. Mạch Phần Cứng Arduino Uno ([do_an_cay.ino](file:///d:/web_vlcntt/do_an_cay/do_an_cay.ino))
 * **Khởi tạo chân & LCD I2C (`setup()`, Dòng 87 – 102):**

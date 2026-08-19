@@ -1,9 +1,10 @@
 # 🌿 BÁO CÁO FLOW CODE & SƠ ĐỒ HỆ THỐNG TRỌNG TÂM
 
-> **Tài liệu phân tích luồng code (Flow Code), sơ đồ khối, sơ đồ tuần tự và tra cứu dòng lệnh chi tiết cho 3 nhóm chức năng trọng tâm:**
+> **Tài liệu phân tích luồng code (Flow Code), sơ đồ khối, sơ đồ tuần tự và tra cứu dòng lệnh chi tiết cho 4 nhóm chức năng trọng tâm:**
 > 1. 🌡️📟 **NHÓM 1: Cảm biến nhiệt độ DHT11 & Màn hình LCD 16x2 I2C** *(Hardware Uno $\rightarrow$ Gateway ESP8266 $\rightarrow$ Web Dashboard & LCD Simulator)*
 > 2. 📧📱 **NHÓM 2: Dịch vụ gửi Email (Supabase) & Thông báo nhanh qua điện thoại (Pushsafer)** *(Cảnh báo quá nhiệt DHT11, Thiết bị & Khôi phục tài khoản)*
 > 3. 📊📈 **NHÓM 3: Cơ sở dữ liệu (Supabase) & Biểu đồ Time-series đa đường (Chart.js)** *(Lưu trữ PostgreSQL Cloud, Realtime WebSockets, Biểu đồ trục kép & Xuất CSV)*
+> 4. 🔐🔑 **NHÓM 4: Bảo mật hệ thống & Quản lý tài khoản (Supabase Auth & OTP PIN)** *(Đăng nhập, Duy trì phiên đăng nhập, Đăng xuất, Quên mật khẩu qua mã OTP PIN 6 số)*
 
 ---
 
@@ -32,6 +33,7 @@
 | | | `js/app.js` | `sendResetPinCode()` | **239 - 300** | Tạo PIN 6 số, lưu Supabase (`save_reset_pin`) và gửi Email khôi phục tài khoản |
 | | | `js/app.js` | `testEmailAlert()` | **1143 - 1165** | Xử lý sự kiện nút bấm Test gửi Email cảnh báo trên giao diện Web |
 | **3. Database & Time-series** | **Supabase DB** | `supabase/schema.sql` | Table `sensor_logs` | **12 - 25** | Khởi tạo bảng PostgreSQL lưu trữ chuỗi thời gian: `temperature`, `humidity`, `soil_moisture` |
+| | | `js/supabaseClient.js` | `pushSensorData()` | **327 - 344** | Ghi bản ghi cảm biến mới vào bảng `sensor_logs` |
 | | | `js/supabaseClient.js` | `subscribeRealtime()` | **191 - 233** | Lắng nghe WebSocket sự kiện `INSERT` trên bảng `sensor_logs` |
 | | | `js/supabaseClient.js` | `fetchSensorHistory()` | **240 - 262** | Truy vấn mốc lịch sử thời gian (`order created_at desc`) từ Supabase |
 | | **Engine Biểu Đồ** | `js/charts.js` | `initChart()` | **13 - 127** | Khởi tạo Chart.js đa đường với 2 trục Y (`yTemp` °C và `yPercent` %) |
@@ -40,6 +42,14 @@
 | | | `js/charts.js` | `exportToCSV()` | **197 - 223** | Trích xuất toàn bộ dữ liệu time-series ra file `CSV UTF-8 (BOM)` |
 | | **Dashboard Web** | `js/app.js` | `initQuickDashboardChart()` | **984 - 1040** | Khởi tạo biểu đồ Quick View Chart thu nhỏ tại trang Tổng quan |
 | | | `js/app.js` | `appendQuickChartPoint()` | **1042 - 1070** | Đẩy điểm dữ liệu mới vào biểu đồ Quick View của Dashboard |
+| **4. Auth & Quên Mật Khẩu** | **Supabase Auth** | `js/supabaseClient.js` | `signInWithPassword()` | **75 - 94** | Xác thực tài khoản qua Supabase Auth API (`auth.signInWithPassword`) |
+| | | `js/supabaseClient.js` | `saveResetPin()` | **135 - 150** | Gọi Supabase RPC function `save_reset_pin` để lưu mã PIN 6 số bảo mật |
+| | | `js/supabaseClient.js` | `resetPasswordWithPin()` | **152 - 168** | Gọi Supabase RPC function `reset_password_with_pin` xác thực PIN & đổi mật khẩu |
+| | **App Core Auth** | `js/app.js` | `checkAuthSession()` | **107 - 125** | Tự động kiểm tra phiên đăng nhập đã lưu trong LocalStorage / Supabase Session |
+| | | `js/app.js` | `handleLogin()` | **162 - 194** | Tiếp nhận Email/Password, gọi Supabase Auth và chuyển sang View Dashboard |
+| | | `js/app.js` | `handleLogout()` | **196 - 208** | Xóa Session, đăng xuất Supabase và đưa người dùng về Form đăng nhập |
+| | | `js/app.js` | `sendResetPinCode()` | **239 - 300** | Sinh mã PIN 6 số ngẫu nhiên, lưu DB và gửi Email FormSubmit tới Gmail |
+| | | `js/app.js` | `verifyPinAndResetPassword()` | **302 - 400** | Kiểm tra hạn 5 phút, đối soát mã PIN, cập nhật mật khẩu mới và chuyển về Login |
 
 ---
 
@@ -814,5 +824,207 @@ sequenceDiagram
 
 ---
 
-*Tài liệu tóm lược tập trung 3 nhóm logic phục vụ thuyết trình & bảo vệ đồ án chuyên ngành Công nghệ thông tin.*
+# 🔐🔑 NHÓM 4: BẢO MẬT HỆ THỐNG & XÁC THỰC TÀI KHOẢN (SUPABASE AUTH & OTP PIN)
+
+### 4.1. Sơ Đồ Khối Toàn Diện: Đăng Nhập & Quên Mật Khẩu (End-to-End Flowchart)
+
+```mermaid
+flowchart TD
+    subgraph AUTH_GATEWAY ["1. TẦNG KHỞI ĐỘNG & KIỂM TRA PHIÊN (Cold Start)"]
+        START["Truy cập ứng dụng Web"] --> CHECK_SESSION["checkAuthSession()<br>(app.js: Dòng 107-125)"]
+        CHECK_SESSION --> HAS_SESSION{"Có phiên hợp lệ?<br>(Supabase getSession / LocalStorage)"}
+        HAS_SESSION -- "ĐÃ ĐĂNG NHẬP" --> APP_VIEW["Hiển thị #view-main-app<br>Nạp Dashboard, Charts & LCD"]
+        HAS_SESSION -- "CHƯA ĐĂNG NHẬP" --> LOGIN_VIEW["Hiển thị #view-login<br>(Form Đăng nhập)"]
+    end
+
+    subgraph LOGIN_FLOW ["2. LUỒNG ĐĂNG NHẬP (LOGIN FLOW)"]
+        LOGIN_VIEW -->|"Nhập Email & Mật khẩu<br>Bấm ĐĂNG NHẬP"| HANDLE_LOGIN["handleLogin()<br>(app.js: Dòng 162-194)"]
+        HANDLE_LOGIN --> SP_AUTH["SupabaseService.signInWithPassword(email, pwd)<br>(supabaseClient.js: Dòng 75-94)"]
+        SP_AUTH --> AUTH_CHECK{"Xác thực Supabase thành công?"}
+        AUTH_CHECK -- "THÀNH CÔNG" --> SAVE_SESSION["Lưu LocalStorage & AppState.currentUser"]
+        AUTH_CHECK -- "FALLBACK / DEMO" --> SAVE_FALLBACK["Lưu phiên quản trị cục bộ (Offline Demo)"]
+        SAVE_SESSION --> APP_VIEW
+        SAVE_FALLBACK --> APP_VIEW
+    end
+
+    subgraph FORGOT_FLOW ["3. LUỒNG QUÊN MẬT KHẨU QUA MÃ OTP PIN 6 SỐ (FORGOT PASSWORD)"]
+        LOGIN_VIEW -->|"Bấm 'Quên mật khẩu?'"| SHOW_FORGOT["showForgotPasswordForm()<br>(app.js: Dòng 215-223)"]
+        SHOW_FORGOT --> STEP1["Bước 1: Nhập Email khôi phục"]
+        
+        STEP1 -->|"Bấm GỬI MÃ PIN"| SEND_PIN["sendResetPinCode()<br>(app.js: Dòng 239-300)"]
+        SEND_PIN --> GEN_PIN["Sinh mã PIN ngẫu nhiên 6 số<br>(Math.floor(100000 + Math.random() * 900000))<br>Hạn sử dụng: 5 phút"]
+        
+        GEN_PIN --> SP_SAVE_PIN["Supabase RPC: save_reset_pin(email, pin)<br>(supabaseClient.js: Dòng 135-150)"]
+        GEN_PIN --> SEND_GMAIL["NotificationService.sendEmailNotification()<br>(FormSubmit REST API $\rightarrow$ Gmail User)"]
+        
+        SEND_GMAIL --> STEP2["Bước 2: Hiển thị Form nhập PIN & Mật khẩu mới<br>(#forgot-step-2: Dòng 285)"]
+        
+        STEP2 -->|"Nhập PIN + Pass Mới + Pass Xác Nhận<br>Bấm XÁC NHẬN & ĐỔI MẬT KHẨU"| VERIFY_PIN["verifyPinAndResetPassword()<br>(app.js: Dòng 302-400)"]
+        
+        VERIFY_PIN --> CHECK_PIN{"Mã PIN đúng &<br>Chưa quá 5 phút?"}
+        CHECK_PIN -- "SAI / HẾT HẠN" --> SHOW_ERR["Báo lỗi màu đỏ, yêu cầu gửi lại PIN"]
+        CHECK_PIN -- "HỢP LỆ" --> SP_RESET["Supabase RPC: reset_password_with_pin()<br>(supabaseClient.js: Dòng 152-168)"]
+        
+        SP_RESET --> UPDATE_LOCAL["Cập nhật mật khẩu mới vào LocalStorage"]
+        UPDATE_LOCAL --> BACK_LOGIN["Tự động điền mật khẩu mới & Chuyển về Form Đăng Nhập<br>(app.js: Dòng 381-390)"]
+    end
+
+    subgraph LOGOUT_FLOW ["4. LUỒNG ĐĂNG XUẤT (LOGOUT)"]
+        APP_VIEW -->|"Bấm Đăng Xuất (#popup-logout-btn)"| HANDLE_LOGOUT["handleLogout()<br>(app.js: Dòng 196-208)"]
+        HANDLE_LOGOUT --> SP_SIGNOUT["SupabaseService.signOut()<br>+ Xóa biosync_local_session"]
+        SP_SIGNOUT --> LOGIN_VIEW
+    end
+```
+
+---
+
+### 4.2. Sơ Đồ Tuần Tự Quên Mật Khẩu & Xác Thực Mã OTP PIN (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as Người Dùng
+    participant UI as Giao Diện Web (#view-login)
+    participant App as app.js
+    participant SupaAuth as Supabase Auth & RPC
+    participant EmailAPI as FormSubmit API
+    participant Gmail as Hòm Thư Gmail
+
+    Note over User, UI: GIAI ĐOẠN 1: YÊU CẦU MÃ PIN KHÔI PHỤC
+    User->>UI: Bấm "Quên mật khẩu?" & Nhập Email (vthuctri@gmail.com)
+    User->>UI: Nhấn nút "GỬI MÃ PIN" (#forgot-send-pin-btn)
+    UI->>App: sendResetPinCode() (Dòng 239)
+    App->>App: Sinh mã PIN: "847291" (Hạn dùng 5 phút)
+    
+    par Lưu Supabase Database
+        App->>SupaAuth: SupabaseService.saveResetPin("vthuctri@gmail.com", "847291")
+        SupaAuth-->>App: { success: true }
+    and Gửi Email HTML qua REST API
+        App->>EmailAPI: POST https://formsubmit.co/ajax/vthuctri@gmail.com (PIN: 847291)
+        EmailAPI->>Gmail: Chuyển phát Email chứa mã PIN 6 số
+        EmailAPI-->>App: { success: "true" }
+    end
+    
+    App->>UI: Mở khóa Form Bước 2 (#forgot-step-2) & Báo thông báo xanh
+
+    Note over User, UI: GIAI ĐOẠN 2: XÁC THỰC PIN & ĐỔI MẬT KHẨU MỚI
+    User->>Gmail: Mở hộp thư Gmail lấy mã PIN "847291"
+    User->>UI: Nhập mã PIN "847291", Mật khẩu mới & Xác nhận
+    User->>UI: Bấm "XÁC NHẬN & ĐỔI MẬT KHẨU" (#forgot-verify-btn)
+    UI->>App: verifyPinAndResetPassword() (Dòng 302)
+    App->>App: Kiểm tra PIN khớp & Thời gian < 5 phút
+    App->>SupaAuth: SupabaseService.resetPasswordWithPin("vthuctri@gmail.com", "847291", newPwd)
+    SupaAuth-->>App: { success: true, message: "Password updated" }
+    App->>UI: Báo thành công "🎉 ĐỔI MẬT KHẨU THÀNH CÔNG!"
+    App->>UI: Tự động điền mật khẩu mới và chuyển sang Form Đăng Nhập (Dòng 381)
+```
+
+---
+
+### 4.3. Bảng Đối Soát Thành Phần Giao Diện Đăng Nhập & Bảo Mật ([index.html](file:///d:/web_vlcntt/index.html))
+
+| Khối Giao Diện | ID Phần Tử DOM | Vị Trí Dòng Code | Chức Năng Chi Tiết |
+| :--- | :--- | :---: | :--- |
+| **Màn Hình Đăng Nhập Toàn Trang** | `#view-login` | **Dòng 52** | Vùng phủ toàn màn hình bảo vệ hệ thống khi chưa đăng nhập |
+| **Khối Form Đăng Nhập Chính** | `#login-card-section` | **Dòng 55** | Chứa ô nhập Email, Mật khẩu và Nút Đăng nhập |
+| **Ô Nhập Email Đăng Nhập** | `#login-username` | **Dòng 79** | Trường điền tài khoản Email |
+| **Ô Nhập Password Đăng Nhập** | `#login-password` | **Dòng 89** | Trường điền mật khẩu đăng nhập |
+| **Nút Đăng Nhập** | `#login-submit-btn` | **Dòng 98** | Gọi hàm `handleLogin()` |
+| **Khối Form Quên Mật Khẩu** | `#forgot-password-section` | **Dòng 104** | Form 2 bước khôi phục mật khẩu qua Email |
+| **Ô Nhập Email Quên Pass (Bước 1)**| `#forgot-email-input` | **Dòng 115** | Điền email nhận mã PIN |
+| **Nút Gửi Mã PIN** | `#forgot-send-pin-btn`| **Dòng 122** | Gọi hàm `sendResetPinCode()` |
+| **Khối Bước 2 (Mã PIN & Mật khẩu mới)**| `#forgot-step-2` | **Dòng 129** | Ẩn mặc định, tự động hiện sau khi gửi PIN thành công |
+| **Ô Nhập Mã PIN 6 Số** | `#forgot-pin-input` | **Dòng 137** | Trường nhập mã xác thực OTP 6 ký tự số |
+| **Ô Nhập Mật Khẩu Mới** | `#forgot-new-pwd` | **Dòng 145** | Trường nhập mật khẩu mới (tối thiểu 6 ký tự) |
+| **Ô Xác Nhận Mật Khẩu Mới** | `#forgot-confirm-pwd` | **Dòng 153** | Trường xác nhận lại mật khẩu mới |
+| **Nút Xác Nhận Đổi Mật Khẩu** | `#forgot-verify-btn` | **Dòng 161** | Gọi hàm `verifyPinAndResetPassword()` |
+
+---
+
+### 4.4. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 4)
+
+#### 1. Xử lý Đăng nhập & Duy trì phiên ([js/app.js](file:///d:/web_vlcntt/js/app.js))
+* **Kiểm tra phiên đăng nhập tự động (`checkAuthSession()`, Dòng 107 – 125):**
+  ```javascript
+  // Dòng 107-125 trong js/app.js
+  async function checkAuthSession() {
+      const savedSession = localStorage.getItem("biosync_local_session");
+      if (window.SupabaseService && window.SupabaseService.isConnected()) {
+          const session = await window.SupabaseService.getCurrentSession();
+          if (session && session.user) {
+              setLoggedInUser(session.user);
+              return;
+          }
+      }
+      if (savedSession) {
+          setLoggedInUser(JSON.parse(savedSession));
+      } else {
+          AppState.isLoggedIn = false;
+          document.getElementById("view-login").classList.remove("hidden");
+          document.getElementById("view-main-app").classList.add("hidden");
+      }
+  }
+  ```
+
+* **Thực hiện Đăng nhập (`handleLogin()`, Dòng 162 – 194):**
+  ```javascript
+  // Dòng 162-185 trong js/app.js
+  window.handleLogin = async function () {
+      const emailInput = document.getElementById("login-username")?.value.trim();
+      const pwdInput = document.getElementById("login-password")?.value;
+      
+      let authResult = null;
+      if (window.SupabaseService && window.SupabaseService.isConnected()) {
+          authResult = await window.SupabaseService.signInWithPassword(emailInput, pwdInput);
+      }
+      if (authResult && authResult.success) {
+          localStorage.setItem("biosync_local_session", JSON.stringify(authResult.user));
+          setLoggedInUser(authResult.user);
+      }
+  };
+  ```
+
+#### 2. Xử lý Quên mật khẩu & Đổi mật khẩu qua mã OTP PIN ([js/app.js](file:///d:/web_vlcntt/js/app.js))
+* **Sinh mã PIN 6 số & Gửi Email (`sendResetPinCode()`, Dòng 239 – 300):**
+  ```javascript
+  // Dòng 259-278 trong js/app.js
+  const pin = Math.floor(100000 + Math.random() * 900000).toString();
+  currentResetPin = pin;
+  currentResetEmail = emailInput;
+  pinExpiryTime = Date.now() + 5 * 60 * 1000; // Hiệu lực 5 phút
+
+  // Lưu mã PIN lên Supabase
+  if (window.SupabaseService && window.SupabaseService.isConnected()) {
+      await window.SupabaseService.saveResetPin(emailInput, pin);
+  }
+  // Gửi Email FormSubmit
+  await window.NotificationService.sendEmailNotification(
+      `🔐 MÃ PIN XÁC THỰC KHÔI PHỤC MẬT KHẨU: [ ${pin} ]`,
+      `Mã PIN tạm thời để đặt lại mật khẩu của bạn là: [ ${pin} ]. Hiệu lực 5 phút.`,
+      emailInput
+  );
+  ```
+
+* **Xác thực PIN & Cập nhật mật khẩu mới (`verifyPinAndResetPassword()`, Dòng 302 – 400):**
+  ```javascript
+  // Dòng 318-375 trong js/app.js
+  if (Date.now() > pinExpiryTime) {
+      step2Msg.textContent = "❌ Mã PIN đã hết hạn (sau 5 phút).";
+      return;
+  }
+  if (pinInput !== currentResetPin) {
+      step2Msg.textContent = "❌ Mã PIN không chính xác!";
+      return;
+  }
+  // Đổi mật khẩu trên database Supabase
+  if (window.SupabaseService && window.SupabaseService.isConnected()) {
+      await window.SupabaseService.resetPasswordWithPin(currentResetEmail, pinInput, newPwd);
+  }
+  // Tự động điền mật khẩu mới và chuyển về trang đăng nhập
+  ```
+
+---
+
+*Tài liệu tóm lược tập trung 4 nhóm logic phục vụ thuyết trình & bảo vệ đồ án chuyên ngành Công nghệ thông tin.*
+
 

@@ -151,7 +151,7 @@
     }
 
     /**
-     * Gửi lệnh trực tiếp qua MQTT - Y HỆT test_mqtt.html
+     * Gửi lệnh trực tiếp qua MQTT
      */
     function sendCommand(cmd) {
         if (client && client.connected) {
@@ -261,7 +261,7 @@
 
         if (toggle) toggle.checked = isOn;
         if (toggleBg) {
-            toggleBg.className = isOn 
+            toggleBg.className = isOn
                 ? "w-12 h-6 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 bg-emerald-500 transition-colors"
                 : "w-12 h-6 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 bg-slate-300 transition-colors";
         }
@@ -296,7 +296,7 @@
 
         if (toggle) toggle.checked = isOn;
         if (toggleBg) {
-            toggleBg.className = isOn 
+            toggleBg.className = isOn
                 ? "w-12 h-6 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 bg-emerald-500 transition-colors"
                 : "w-12 h-6 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 bg-slate-300 transition-colors";
         }
@@ -348,7 +348,7 @@
         const txt = document.getElementById("cloud-status-text");
         if (txt) txt.textContent = text;
         if (ind) {
-            ind.className = online 
+            ind.className = online
                 ? "flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                 : "flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300";
         }

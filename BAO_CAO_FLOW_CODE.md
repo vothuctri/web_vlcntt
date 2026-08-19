@@ -38,7 +38,14 @@
 flowchart TD
     subgraph HARDWARE_UNO ["1. TẦNG PHẦN CỨNG ARDUINO UNO (do_an_cay.ino)"]
         DHT["🌡️ Cảm biến DHT11 (Chân A2)"] -->|"Đọc tín hiệu nhiệt độ & độ ẩm"| UNO_READ["readSensors()<br>(Dòng 171-179)"]
-        UNO_READ -->|"Giao tiếp I2C 0x27"| LCD_HW["📟 Màn hình LCD 16x2 Phần Cứng<br>updateLCD(0) (Dòng 259-276)<br>Hiển thị: T:xx.x°C H:xx%"]
+        
+        UNO_READ -->|"Chuyển trang mỗi 3.5s"| LCD_PAGE{"currentScreen = (currentScreen + 1) % 2"}
+        LCD_PAGE -->|"Trang 0: Môi trường"| LCD_P0["📟 LCD Dòng 1: T:xx.x°C H:xx%<br>📟 LCD Dòng 2: Dat:xx% LDR:xx%"]
+        LCD_PAGE -->|"Trang 1: Thiết bị"| LCD_P1["📟 LCD Dòng 1: B:ON/OFF LED:ON/OFF<br>📟 LCD Dòng 2: Che do: TU DONG"]
+        
+        LCD_P0 --> LCD_HW["📟 Màn hình LCD 16x2 Phần Cứng (I2C 0x27)"]
+        LCD_P1 --> LCD_HW
+
         UNO_READ -->|"Đóng gói JSON"| UNO_SEND["sendDataToESP()<br>(Dòng 194-212)<br>Xuất UART Serial 9600"]
     end
 
@@ -51,19 +58,22 @@ flowchart TD
         ESP_PUB -->|"TCP/IP Wi-Fi"| BROKER["☁️ MQTT Broker (broker.emqx.io:1883)"]
     end
 
-    subgraph WEB_DASHBOARD ["4. TẦNG WEB DASHBOARD & SIMULATOR"]
+    subgraph WEB_DASHBOARD ["4. TẦNG WEB FRONTEND DASHBOARD & SIMULATOR"]
         BROKER -->|"WebSocket WSS"| WEB_RECV["mqttClient.js & app.js<br>processIncomingSensorData(data)<br>(Dòng 832-845)"]
         
-        WEB_RECV -->|"Cập nhật giao diện"| WEB_METRIC["updateMetricCards(data)<br>(Dòng 897-912)<br>Thẻ Nhiệt Độ (°C) & Độ Ẩm (%)"]
-        
-        WEB_RECV -->|"Cập nhật LCD ảo"| LCD_SIM["lcdSimulator.js<br>updateFromSensors(temp, hum, ...)<br>(Dòng 48-62)"]
-        LCD_SIM -->|"Định dạng 16 ký tự pad16"| LCD_DOM["🖥️ Render HTML DOM (#lcd-line-1)<br>Hiển thị: Temp:xx.xC H:xx%"]
+        WEB_RECV -->|"Cập nhật thẻ số liệu Dashboard"| WEB_METRIC["updateMetricCards(data)<br>(app.js: Dòng 897-912)"]
+        WEB_METRIC --> DOM_TEMP["📍 #metric-temp-val (index.html: D438)<br>Điền: 28.5°C"]
+        WEB_METRIC --> DOM_HUM["📍 #metric-hum-val (index.html: D455)<br>Điền: 70%"]
+
+        WEB_RECV -->|"Cập nhật mô phỏng LCD 16x2"| LCD_SIM["lcdSimulator.js<br>updateFromSensors(temp, hum, soil, isDark)<br>(Dòng 48-62)"]
+        LCD_SIM -->|"Định dạng dòng 1 qua pad16"| DOM_LCD1["📍 #lcd-line-1 (index.html: D547)<br>Hiển thị: Temp:28.5C H:70%"]
+        LCD_SIM -->|"Định dạng dòng 2 qua pad16"| DOM_LCD2["📍 #lcd-line-2 (index.html: D548)<br>Hiển thị: Soil:65% Lgt:DARK"]
     end
 ```
 
 ---
 
-### 1.2. Sơ Đồ Tuần Tự (Sequence Diagram)
+### 1.2. Sơ Đồ Tuần Tự Xuất Thông Tin LCD & Frontend (Sequence Diagram)
 
 ```mermaid
 sequenceDiagram
@@ -73,32 +83,78 @@ sequenceDiagram
     participant LCD_HW as LCD 16x2 Hardware
     participant ESP as ESP8266 (esp_wifi.ino)
     participant Broker as MQTT Broker
-    participant Web as Web (app.js)
+    participant Web as Web Core (app.js)
     participant LCD_Sim as lcdSimulator.js
-    participant DOM as HTML DOM
+    participant UI_Cards as Thẻ Dashboard (#tab-dashboard)
+    participant UI_LCD as Màn Hình LCD (#tab-analytics)
 
-    Note over Uno: Định kỳ mỗi 2000ms
+    Note over Uno: 1. Đọc cảm biến định kỳ mỗi 2000ms
     Uno->>DHT: dht.readTemperature(), dht.readHumidity() (Chân A2)
     DHT-->>Uno: Trả về: temp = 28.5°C, hum = 70%
     
-    par Hiển thị LCD Phần Cứng
-        Uno->>LCD_HW: updateLCD(0) -> Ghi I2C dòng 1: "T:28.5°C H:70%"
-    and Truyền Dữ Liệu Lên Gateway
-        Uno->>ESP: sendDataToESP() -> Gửi chuỗi JSON (temp, hum) qua UART
+    par [LUỒNG PHẦN CỨNG]: Xuất LCD 16x2 I2C (Luân chuyển mỗi 3.5s)
+        alt currentScreen == 0 (Trang 1: Môi trường)
+            Uno->>LCD_HW: Dòng 1 (0,0): "T:28.5°C H:70%   " | Dòng 2 (0,1): "Dat:65%  LDR:80% "
+        else currentScreen == 1 (Trang 2: Thiết bị)
+            Uno->>LCD_HW: Dòng 1 (0,0): "B:OFF  LED:ON    " | Dòng 2 (0,1): "Che do: TU DONG "
+        end
+    and [LUỒNG TRUYỀN THÔNG]: Gửi Gateway ESP8266 -> MQTT -> Web
+        Uno->>ESP: sendDataToESP() -> Gửi UART: {"temp":28.5,"hum":70,"soil":65,"ldr":80,...}\n
         ESP->>Broker: client.publish("smart_terrarium/nhom05/sensors", JSON)
-        Broker->>Web: Đẩy gói tin qua WebSocket
+        Broker->>Web: WebSocket gửi gói tin tới trình duyệt
     end
 
+    Note over Web, UI_LCD: 2. Luồng xử lý và xuất dữ liệu lên Frontend DOM
     Web->>Web: processIncomingSensorData(data) (Dòng 832)
-    Web->>DOM: updateMetricCards() -> Cập nhật #current-temp = 28.5°C, #current-hum = 70%
-    Web->>LCD_Sim: updateFromSensors(28.5, 70, ...) (Dòng 838)
-    LCD_Sim->>LCD_Sim: Ghép chuỗi dòng 1: "Temp:28.5C H:70%"
-    LCD_Sim->>DOM: updateDisplay() -> Ghi vào #lcd-line-1
+    
+    par Cập nhật Thẻ Metric Dashboard
+        Web->>UI_Cards: updateMetricCards() -> Điền vào #metric-temp-val & #metric-hum-val
+    and Cập nhật Khung LCD 16x2 Simulator
+        Web->>LCD_Sim: updateFromSensors(28.5, 70, 65, isDark) (Dòng 838)
+        LCD_Sim->>LCD_Sim: Ghép chuỗi & cắt đệm pad16(str)
+        LCD_Sim->>UI_LCD: updateDisplay() -> Ghi trực tiếp vào #lcd-line-1 & #lcd-line-2
+    end
 ```
 
 ---
 
-### 1.3. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 1)
+### 1.3. Bảng Ma Trận 16x2 Ký Tự (LCD Phần Cứng & LCD Mô Phỏng Web)
+
+#### A. Màn hình LCD 16x2 Phần Cứng (Luân chuyển mỗi 3.5 giây qua `updateLCD()`)
+```text
+Trang 0 (Môi Trường):
+[Hàng 0] | T | : | 2 | 8 | . | 5 | ° | C |   | H | : | 7 | 0 | % |   |   | (16 ký tự)
+[Hàng 1] | D | a | t | : | 6 | 5 | % |   |   | L | D | R | : | 8 | 0 | % | (16 ký tự)
+
+Trang 1 (Thiết Bị & Chế Độ):
+[Hàng 0] | B | : | O | F | F |   |   | L | E | D | : | O | N |   |   |   | (16 ký tự)
+[Hàng 1] | C | h | e |   | d | o | : |   | T | U |   | D | O | N | G |   | (16 ký tự)
+```
+
+#### B. Màn hình LCD 16x2 Mô Phỏng Web (`lcdSimulator.js` $\rightarrow$ `#tab-analytics`)
+```text
+[Dòng 1 - #lcd-line-1] | T | e | m | p | : | 2 | 8 | . | 5 | C |   | H | : | 7 | 0 | % | (16 ký tự)
+[Dòng 2 - #lcd-line-2] | S | o | i | l | : | 6 | 5 | % |   | L | g | t | : | D | A | R | K | (16 ký tự)
+```
+
+---
+
+### 1.4. Vị Trí Cụ Thể Trên Giao Diện Frontend ([index.html](file:///d:/web_vlcntt/index.html))
+
+| Tên Khối Giao Diện | File Nguồn | ID Phần Tử DOM | Vị Trí Dòng Code | Chức Năng Hiển Thị |
+| :--- | :--- | :--- | :---: | :--- |
+| **Khung Màn hình LCD 16x2** | `index.html` | `#lcd-screen-container` | **Dòng 546** | Hộp chứa nền xanh LCD retro, viền phát sáng, chứa 2 dòng hiển thị |
+| **Dòng 1 LCD 16x2** | `index.html` | `#lcd-line-1` | **Dòng 547** | Hiển thị chuỗi Nhiệt độ & Độ ẩm DHT11 (`Temp:xx.xC H:xx%`) |
+| **Dòng 2 LCD 16x2** | `index.html` | `#lcd-line-2` | **Dòng 548** | Hiển thị chuỗi Độ ẩm đất & Trạng thái sáng (`Soil:xx% Lgt:DARK/SUNNY`) |
+| **Tab Chứa LCD Simulator** | `index.html` | `#tab-analytics` | **Dòng 524** | Tab Phân tích & Dự đoán (Analytics) trên thanh điều hướng |
+| **Thẻ Đo Nhiệt Độ Dashboard**| `index.html`| `#metric-temp-val` | **Dòng 438** | Thẻ lớn hiển thị số đo nhiệt độ tức thời (°C) |
+| **Thẻ Đo Độ Ẩm Dashboard** | `index.html` | `#metric-hum-val` | **Dòng 455** | Thẻ lớn hiển thị số đo độ ẩm không khí (%) |
+| **Thẻ Đo Độ Ẩm Đất** | `index.html` | `#metric-soil-val` | **Dòng 472** | Thẻ lớn hiển thị phần trăm độ ẩm đất (%) |
+| **Thẻ Đo Quang Trở LDR** | `index.html` | `#metric-light-val` | **Dòng 489** | Thẻ lớn hiển thị độ sáng Lux & trạng thái Ngày/Đêm |
+
+---
+
+### 1.5. Chi Tiết Các Hàm & Dòng Lệnh Cốt Lõi (Nhóm 1)
 
 #### 1. Mạch Phần Cứng Arduino Uno ([do_an_cay.ino](file:///d:/web_vlcntt/do_an_cay/do_an_cay.ino))
 * **Khởi tạo chân & LCD I2C (`setup()`, Dòng 87 – 102):**
@@ -107,7 +163,7 @@ sequenceDiagram
   dht.begin();
   lcd.init();
   lcd.backlight();
-  lcd.createChar(0, degreeChar); // Tạo ký tự °C
+  lcd.createChar(0, degreeChar); // Nạp byte ký tự °C vào CGRAM của LCD
 
   lcd.setCursor(0, 0);
   lcd.print("SMART TERRARIUM ");
@@ -131,11 +187,12 @@ sequenceDiagram
   }
   ```
 
-* **Hiển thị thông số lên màn hình LCD 16x2 I2C (`updateLCD()`, Dòng 259 – 276):**
+* **Hiển thị luân phiên 2 trang lên LCD 16x2 I2C (`updateLCD()`, Dòng 259 – 290):**
   ```cpp
-  // Dòng 259-276 trong do_an_cay/do_an_cay.ino
+  // Dòng 259-290 trong do_an_cay/do_an_cay.ino
   void updateLCD(int screen) {
     if (screen == 0) {
+      // Trang 1: Thông số nhiệt độ, độ ẩm không khí & đất, ánh sáng
       lcd.setCursor(0, 0);
       lcd.print("T:");
       lcd.print(temperature, 1);
@@ -143,7 +200,26 @@ sequenceDiagram
       lcd.print("C H:");
       lcd.print(humidity, 0);
       lcd.print("%   ");
-      ...
+
+      lcd.setCursor(0, 1);
+      lcd.print("Dat:");
+      lcd.print(soilPercent);
+      lcd.print("%  LDR:");
+      lcd.print(ldrPercent);
+      lcd.print("%   ");
+    } 
+    else if (screen == 1) {
+      // Trang 2: Trạng thái Máy Bơm, Đèn LED & Chế độ vận hành
+      lcd.setCursor(0, 0);
+      lcd.print("B:");
+      lcd.print(pumpState ? "ON " : "OFF");
+      lcd.print(" LED:");
+      lcd.print(ledState ? "ON " : "OFF");
+      lcd.print("    ");
+
+      lcd.setCursor(0, 1);
+      lcd.print("Che do: ");
+      lcd.print(isAutoMode ? "TU DONG " : "THU CONG");
     }
   }
   ```
@@ -169,7 +245,19 @@ sequenceDiagram
   ```
 
 #### 3. Mô phỏng LCD 16x2 trên Web ([js/lcdSimulator.js](file:///d:/web_vlcntt/js/lcdSimulator.js))
-* **Định dạng số liệu dòng 1 (`updateFromSensors()`, Dòng 48 – 62):**
+* **Khởi tạo DOM elements (`initLCD()`, Dòng 24 – 31):**
+  ```javascript
+  // Dòng 24-31 trong js/lcdSimulator.js
+  function initLCD() {
+      line1Element = document.getElementById("lcd-line-1");
+      line2Element = document.getElementById("lcd-line-2");
+      backlightElement = document.getElementById("lcd-screen-container");
+
+      updateDisplay("LCD 16x2 I2C READY", "DHT11 CONNECTED");
+  }
+  ```
+
+* **Định dạng số liệu dòng 1 & 2 (`updateFromSensors()`, Dòng 48 – 62):**
   ```javascript
   // Dòng 48-62 trong js/lcdSimulator.js
   function updateFromSensors(temp, hum, soil, lightIsDark) {
@@ -185,7 +273,7 @@ sequenceDiagram
   }
   ```
 
-* **Chuẩn hóa 16 ký tự & Render DOM (`pad16()` & `updateDisplay()`, Dòng 15 – 42):**
+* **Cắt đệm chuẩn 16 ký tự & Cập nhật DOM HTML (`pad16()` & `updateDisplay()`, Dòng 15 – 42):**
   ```javascript
   // Dòng 15-19 & 35-42 trong js/lcdSimulator.js
   function pad16(str) {

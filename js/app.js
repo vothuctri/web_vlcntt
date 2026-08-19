@@ -637,7 +637,7 @@
     };
 
     /**
-     * BẬT / TẮT MÁY BƠM M1 THỦ CÔNG (ĐỒNG BỘ 100% NHƯ test_mqtt.html)
+     * BẬT / TẮT MÁY BƠM M1 THỦ CÔNG
      */
     window.togglePump = function (status) {
         if (status === undefined) status = !AppState.pumpStatus;

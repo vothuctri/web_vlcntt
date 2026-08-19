@@ -844,7 +844,7 @@
             );
         }
 
-        // 2. Cập nhật biểu đồ Dashboard (nhẹ nhàng, không giật lag)
+        // 2. Cập nhật biểu đồ Dashboard
         appendQuickChartPoint(data);
 
         const now = Date.now();
